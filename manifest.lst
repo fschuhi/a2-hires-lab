@@ -26,6 +26,12 @@ requirements-win.txt
 .gitignore
 .gitattributes
 
+### --- Excel workbench ---
+#a2-hires-lab.xlsm
+src/bas/NTSCColor.bas
+src/bas/SpriteEditor.bas
+src/bas/Util.bas
+
 ### --- DevOps tools ---
 #tools/concat_files.py
 

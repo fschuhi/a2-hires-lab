@@ -14,9 +14,10 @@
 
 ## Deliverable 1: Sprite Editor/Viewer
 
-- Implement the `.xlsm` workbook per `a2-hires-lab-design.md`
-- Test with the two example sprites from Chapter 3 page 8 (one all-high-bit, one mixed)
+- ~~Implement the `.xlsm` workbook per `a2-hires-lab-design.md`~~ -- done 2026-09-09, see `HISTORY.md`
+- Test with the two example sprites from Chapter 3 page 8 (one all-high-bit, one mixed) -- first sprite verified 2026-09-09; second sprite still open
 - Verify byte boundary color behavior: set HB0 ≠ HB1 and check that the color viewer shows the correct palette per byte
+- _Needs investigation:_ `Hex0`/`Hex1` store the byte as the game actually holds it (pixels + high bit OR'd in), which doesn't match the chapter's own printed byte values (no high bit) -- e.g. the chapter's `0x55` is `0xD5` in `Hex0`. Not a bug, just slightly inconvenient for eyeballing against the PDF. Revisit when building Sprite Inventory (Phase 2), since that's exactly where raw `sprite_data.asm` bytes (no high bit) meet the editor's convention (high bit included) -- likely resolved with masked-hex display columns rather than changing `Hex0`/`Hex1` itself.
 
 ## Future deliverables (parked until Phase 1 is done)
 
@@ -36,3 +37,4 @@
 - PyXll bridge: call `papple2` color logic from Excel, compare against VBA rendering side-by-side
 - Half-pixel / 560-column viewer mode for NTSC phase-shift visualization
 - Emulator-driven verification: load Lode Runner in `papple2`, run `DRAW_SPRITE_PAGE1`, capture screen buffer, compare
+

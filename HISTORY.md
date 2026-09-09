@@ -9,6 +9,10 @@
 
 ---
 
+## 2026-09-09 -- Deliverable 1 (Sprite Editor/Viewer) built and colour model fixed (Claude Sonnet 5)
+
+Implemented the full Deliverable 1 stack from the design doc: sheet layout (`openpyxl`, with a multi-area named-range bug fixed along the way), `Util` (hex/bit helpers, plus a `HexToBits` addition so Bits0/Bits1 run as live formulas), `NTSCColor`, and `SpriteEditor` with both idempotent buttons. `NTSCColor` also picked up a generalization -- absolute screen column and true left/right neighbors instead of an assumed isolated sprite at column 0 -- and, more importantly, a real fix: a colored 0-pixel takes its hue from its flanking 1-bit's column, not its own, without which a repeating `0x55` byte rendered as alternating stripes instead of the solid fill it's meant to produce. Verified by reproducing the chapter's worked "5"-shaped sprite pixel-for-pixel. Masked-hex display columns for comparing directly against the chapter's byte values were discussed but not yet built.
+
 ## 2026-09-08 / 2026-09-09 — Project inception and design (Opus 4.6)
 
 Set up the `a2-hires-lab` project as a standalone Excel workbook for
@@ -18,26 +22,12 @@ disassembly data (Chapter 3 of `main.nw`).
 Over two sessions we worked out the design document
 (`a2-hires-lab-design.md`) through back-and-forth discussion:
 
-- Settled on VBA macros with cell background coloring (no conditional
-  formatting) as the rendering approach.
-- Designed the Sprite Editor/Viewer sheet layout: 11×14 pixel grid,
-  per-byte high-bit toggles, hex and bits display columns, color
-  viewer area.
-- Formalized the NTSC artifact color rules as a nearest-neighbor
-  decision table with a color lookup, verified against the chapter's
-  examples and Tilleul's prior art.
-- Defined five deliverables (Editor/Viewer, Inventory, Pixel Shifter,
-  Sprite Shifter, Memory Map Viewer) plus a "Further ideas" section.
-- Explained the sprite data interleaving in `sprite_data.asm` as a
-  6502 lookup optimization (indirect-indexed addressing, no multiply).
-- Identified that `Apple.py`'s `update_hires` uses a simplified
-  per-pixel color model without adjacency — the workbook's VBA will
-  become the ground truth for fixing it.
-- Found and reviewed François Vander Linden's `bitmap_creator`
-  spreadsheet as prior art; confirmed it validates the Excel approach
-  but is conceptually distant (screen-fragment editor, formula-driven,
-  no sprite or game-data awareness).
-- Established naming conventions: Hungarian notation for VBA, no
-  module prefix, `cl` prefix for classes.
-- Prepared the seed package for the build session (design doc, ASM
-  data files, `Apple.py`, Chapter 3 PDF).
+- Settled on VBA macros with cell background coloring (no conditional formatting) as the rendering approach 
+- Designed the Sprite Editor/Viewer sheet layout: 11×14 pixel grid, per-byte high-bit toggles, hex and bits display columns, color viewer area.
+- Formalized the NTSC artifact color rules as a nearest-neighbor decision table with a color lookup, verified against the chapter's examples and Tilleul's prior art.
+- Defined five deliverables (Editor/Viewer, Inventory, Pixel Shifter, Sprite Shifter, Memory Map Viewer) plus a "Further ideas" section.
+- Explained the sprite data interleaving in `sprite_data.asm` as a 6502 lookup optimization (indirect-indexed addressing, no multiply).
+- Identified that `Apple.py`'s `update_hires` uses a simplified per-pixel color model without adjacency — the workbook's VBA will become the ground truth for fixing it.
+- Found and reviewed François Vander Linden's `bitmap_creator` spreadsheet as prior art; confirmed it validates the Excel approach but is conceptually distant (screen-fragment editor, formula-driven, no sprite or game-data awareness).
+- Established naming conventions: Hungarian notation for VBA, no module prefix, `cl` prefix for classes.
+- Prepared the seed package for the build session (design doc, ASM data files, `Apple.py`, Chapter 3 PDF).

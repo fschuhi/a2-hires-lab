@@ -1,8 +1,8 @@
-# haddolib — Makefile
+# a2-hires-lab -- Makefile
 #
 # Cross-platform: macOS (native .venv) and Windows (native .venv-win, run from an
-# MSYS2 / Git-Bash shell). GNU make sets OS=Windows_NT on Windows — including
-# inside MSYS2 — so the block below flips only the things that actually differ:
+# MSYS2 / Git-Bash shell). GNU make sets OS=Windows_NT on Windows -- including
+# inside MSYS2 -- so the block below flips only the things that actually differ:
 # the venv dir, its bin/Scripts subdir, the Python launcher, and the reqs file.
 #
 # All targets and recipes are shared; coreutils (touch/rm/find/grep/awk) come
