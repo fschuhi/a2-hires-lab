@@ -32,6 +32,9 @@ src/bas/NTSCColor.bas
 src/bas/SpriteEditor.bas
 src/bas/Util.bas
 
+### --- Screenshots and other images ---
+#img/sprite_editor_viewer.jpg
+
 ### --- DevOps tools ---
 #tools/concat_files.py
 
