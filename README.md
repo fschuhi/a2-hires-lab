@@ -4,7 +4,7 @@
 
 ---
 
-![Description of image](img/pic.jpg)
+![Description of image](img/sprite_editor_viewer.jpg)
 
 ## Vision
 
