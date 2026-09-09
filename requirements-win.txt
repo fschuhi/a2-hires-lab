@@ -1,0 +1,11 @@
+# a2-hires-lab — Windows-only requirements
+#
+# Pulls in the shared base, then adds packages that only exist / are only needed
+# on Windows. Selected automatically by the Makefile when OS=Windows_NT.
+
+-r requirements.txt
+
+# Excel integration — Windows-only (PyXLL does not run on macOS).
+# Requires a PyXLL licence (already configured in the VM).
+pyxll>=5.12
+openpyxl

@@ -1,0 +1,6 @@
+# Dev tools
+black>=24.0
+pytest>=8.0
+
+# Excel
+openpyxl

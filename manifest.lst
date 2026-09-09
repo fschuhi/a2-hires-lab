@@ -1,0 +1,45 @@
+# (This file is the basis of the `filesdump.txt` in which it is included, i.e. the document you are reading right now.
+# The files in this manifest are the relevant files for understanding how the project hangs together.
+# Files which are commented out exist but are not included in the `filesdump.txt`.)
+
+### --- Context & Meta ---
+# ⚠️ NON-NEGOTIABLE collaboration rules - READ FIRST
+CRITICAL_RULES.md
+
+LLM_INSTRUCTIONS.md
+manifest.lst
+tmp/project_tree.txt
+
+# An Excel workbook for exploring Apple II hi-res graphics mechanics
+a2-hires-lab-design.md
+
+# standard project documentation (probably slightly out of sync)
+README.md
+GOALS.md
+TODO.md
+
+### --- Build & Python Configuration ---
+Makefile
+pyproject.toml
+requirements.txt
+requirements-win.txt
+.gitignore
+.gitattributes
+
+### --- DevOps tools ---
+#tools/concat_files.py
+
+### --- Python source ---
+src/papple2/Apple.py
+
+### --- Tests ---
+# TBA
+
+### --- Data ---
+#data/lode_runner_reveng/main.nw_chapter-3.pdf
+#data/lode_runner_reveng/main-chapter-3.md
+data/lode_runner_reveng/sprite_data.asm
+data/lode_runner_reveng/row_to_offset_lo_table.asm
+data/lode_runner_reveng/row_to_offset_hi_table.asm
+data/lode_runner_reveng/pixel_shift_table.asm
+data/lode_runner_reveng/pixel_pattern_table.asm
