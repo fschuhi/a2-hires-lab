@@ -15,6 +15,7 @@ Public Function HexToByte(ByVal sHex As String) As Long
     HexToByte = CLng("&H" & sHex)
 End Function
 
+
 Public Function GetBit(ByVal lVal As Long, ByVal iBit As Long) As Long
     ' Extract one bit (0 or 1) at position iBit (0 = LSB).
     GetBit = (lVal \ (2 ^ iBit)) Mod 2
@@ -30,6 +31,7 @@ Public Function SetBit(ByVal lVal As Long, ByVal iBit As Long, ByVal iB As Long)
         SetBit = lVal And (Not lMask)
     End If
 End Function
+
 
 Public Function ByteToBits(ByVal lVal As Long) As String
     ' 0-127 -> "0000000"-"1111111", bit 6 leftmost, bit 0 rightmost.
@@ -57,6 +59,7 @@ Public Function BitsToByte(ByVal sBits As String) As Long
     Next iPos
     BitsToByte = lVal
 End Function
+
 
 Public Function HexToBits(ByVal sHex As String) As String
     ' "00"-"FF" -> 7-bit binary string, high bit masked off.

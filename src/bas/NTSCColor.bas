@@ -20,6 +20,7 @@ Private Const COLOR_WHITE As Long = &HFFFFFF   ' RGB(255,255,255)
 Private Const FIRST_COL As Long = 0
 Private Const LAST_COL As Long = 13
 
+
 Public Function ColoredPixel(ByVal iScreenCol As Long, ByVal iHighBit As Long) As Long
     ' Absolute screen column parity + high bit -> the one color pair
     ' selectable for that byte.
@@ -39,6 +40,7 @@ Public Function ColoredPixel(ByVal iScreenCol As Long, ByVal iHighBit As Long) A
         End If
     End If
 End Function
+
 
 Public Function PixelColor(ByVal iV As Long, ByVal iL As Long, ByVal iR As Long, _
                             ByVal iScreenCol As Long, ByVal iH As Long) As Long
@@ -68,6 +70,7 @@ Public Function PixelColor(ByVal iV As Long, ByVal iL As Long, ByVal iR As Long,
         End If
     End If
 End Function
+
 
 Public Function RowColors(aiRow() As Long, _
                           ByVal iHB0 As Long, _

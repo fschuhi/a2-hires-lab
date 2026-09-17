@@ -14,13 +14,13 @@ Option Explicit
 ' Bits0/Bits1 are NOT written here -- they are worksheet formulas
 ' (=HexToBits(...)) that follow Hex0/Hex1 automatically.
 
-Private Const SHEET_NAME As String = "Sprite Editor-Viewer"
 Private Const ROW_FIRST As Long = 4          ' editor/hex row for sprite row 0
 Private Const VIEWER_ROW_FIRST As Long = 17  ' viewer row for sprite row 0
 Private Const COL_HB0 As Long = 9            ' I
 Private Const COL_HB1 As Long = 17           ' Q
 Private Const COL_HEX0 As Long = 18          ' R
 Private Const COL_HEX1 As Long = 19          ' S
+
 
 Private Function PixelCol(ByVal iCol As Long) As Long
     ' Pixel columns 0-6 -> B-H (2-8); pixel columns 7-13 -> J-P (10-16).
@@ -32,6 +32,7 @@ Private Function PixelCol(ByVal iCol As Long) As Long
         PixelCol = iCol + 3
     End If
 End Function
+
 
 Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
                                    ByVal iByteIdx As Long, ByVal iHB As Long) As Long
@@ -50,10 +51,8 @@ Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
     PixelsToByteValue = lVal
 End Function
 
-Public Sub UpdateViewer()
-    Dim ws As Worksheet
-    Set ws = ThisWorkbook.Worksheets(SHEET_NAME)
 
+Public Sub UpdateViewer(ws As Worksheet)
     Dim aiPixels(0 To 10, 0 To 13) As Long
     Dim aiHB(0 To 10, 0 To 1) As Long
     Dim iRow As Long, iCol As Long
@@ -81,10 +80,8 @@ Public Sub UpdateViewer()
     PaintViewer ws, aiPixels, aiHB
 End Sub
 
-Public Sub LoadFromBytes()
-    Dim ws As Worksheet
-    Set ws = ThisWorkbook.Worksheets(SHEET_NAME)
 
+Public Sub LoadFromBytes(ws As Worksheet)
     Dim aiPixels(0 To 10, 0 To 13) As Long
     Dim aiHB(0 To 10, 0 To 1) As Long
     Dim iRow As Long, iCol As Long
@@ -119,6 +116,7 @@ Public Sub LoadFromBytes()
     ' 3. Paint the viewer from the pixels just decoded.
     PaintViewer ws, aiPixels, aiHB
 End Sub
+
 
 Private Sub PaintViewer(ByVal ws As Worksheet, aiPixels() As Long, aiHB() As Long)
     ' Shared by both buttons: given pixels + HB already in memory, repaint
