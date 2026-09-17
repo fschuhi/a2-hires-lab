@@ -14,13 +14,13 @@ Option Explicit
 ' Bits0/Bits1 are NOT written here -- they are worksheet formulas
 ' (=HexToBits(...)) that follow Hex0/Hex1 automatically.
 
+Private Const SHEET_NAME As String = "Sprite Editor-Viewer"
 Private Const ROW_FIRST As Long = 4          ' editor/hex row for sprite row 0
 Private Const VIEWER_ROW_FIRST As Long = 17  ' viewer row for sprite row 0
 Private Const COL_HB0 As Long = 9            ' I
 Private Const COL_HB1 As Long = 17           ' Q
 Private Const COL_HEX0 As Long = 18          ' R
 Private Const COL_HEX1 As Long = 19          ' S
-
 
 Private Function PixelCol(ByVal iCol As Long) As Long
     ' Pixel columns 0-6 -> B-H (2-8); pixel columns 7-13 -> J-P (10-16).
@@ -32,7 +32,6 @@ Private Function PixelCol(ByVal iCol As Long) As Long
         PixelCol = iCol + 3
     End If
 End Function
-
 
 Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
                                    ByVal iByteIdx As Long, ByVal iHB As Long) As Long
@@ -50,7 +49,6 @@ Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
     If iHB <> 0 Then lVal = SetBit(lVal, 7, 1)
     PixelsToByteValue = lVal
 End Function
-
 
 Public Sub UpdateViewer(ws As Worksheet)
     Dim aiPixels(0 To 10, 0 To 13) As Long
@@ -79,7 +77,6 @@ Public Sub UpdateViewer(ws As Worksheet)
     ' 3. Paint the viewer from the pixels just read.
     PaintViewer ws, aiPixels, aiHB
 End Sub
-
 
 Public Sub LoadFromBytes(ws As Worksheet)
     Dim aiPixels(0 To 10, 0 To 13) As Long
@@ -117,6 +114,53 @@ Public Sub LoadFromBytes(ws As Worksheet)
     PaintViewer ws, aiPixels, aiHB
 End Sub
 
+Public Sub LoadSpriteFromTable(ws As Worksheet)
+    ' Pulls the 11 rows of the currently selected sprite (Sprite Loader!C4)
+    ' out of SPRITE_DATA, using the addresses already computed in
+    ' AddrByte0/AddrByte1 on "Sprite Loader". The high bit is forced on
+    ' for every byte -- the stored table is essentially always high-bit-
+    ' clear (see TODO.md), and the game itself sets the high bit via the
+    ' shift/pattern tables at draw time, not per stored byte.
+    '
+    ' HexByte0/HexByte1 are local ranges (one per Sprite Editor-Viewer
+    ' sheet), so the unqualified Range(...) calls below resolve to
+    ' whichever such sheet is currently active -- same as typing into
+    ' those cells by hand would.
+    Dim wsData As Worksheet
+    Set wsData = ThisWorkbook.Worksheets("SPRITE_DATA")
+
+    Dim lBaseAddr As Long
+    lBaseAddr = HexToByte(Range("SpriteBaseAddress").Value)
+
+    Dim iRow As Long
+    Dim lAddr As Long, lIdx As Long
+    Dim iDataRow As Long, iDataCol As Long
+    Dim lByte As Long
+
+    For iRow = 1 To 11
+        ' -- byte 1 --
+        lAddr = HexToByte(Range("AddrByte0").Cells(iRow).Value)
+        lIdx = lAddr - lBaseAddr
+        iDataRow = 3 + lIdx \ 16
+        iDataCol = 3 + (lIdx Mod 16)
+        lByte = HexToByte(wsData.Cells(iDataRow, iDataCol).Value)
+        lByte = SetBit(lByte, 7, 1)
+        ws.Range("HexByte0").Cells(iRow).Value = ByteToHex(lByte)
+
+        ' -- byte 2 --
+        lAddr = HexToByte(Range("AddrByte1").Cells(iRow).Value)
+        lIdx = lAddr - lBaseAddr
+        iDataRow = 3 + lIdx \ 16
+        iDataCol = 3 + (lIdx Mod 16)
+        lByte = HexToByte(wsData.Cells(iDataRow, iDataCol).Value)
+        lByte = SetBit(lByte, 7, 1)
+        ws.Range("HexByte1").Cells(iRow).Value = ByteToHex(lByte)
+    Next iRow
+
+    ' Decompose into pixels + HB and paint the viewer, exactly once,
+    ' after all 11 rows have been written.
+    LoadFromBytes ws
+End Sub
 
 Private Sub PaintViewer(ByVal ws As Worksheet, aiPixels() As Long, aiHB() As Long)
     ' Shared by both buttons: given pixels + HB already in memory, repaint
@@ -138,3 +182,5 @@ Private Sub PaintViewer(ByVal ws As Worksheet, aiPixels() As Long, aiHB() As Lon
         Next iCol
     Next iRow
 End Sub
+
+

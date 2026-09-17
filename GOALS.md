@@ -8,11 +8,13 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** -- 2026-09-09
-Deliverable 1 (Sprite Editor/Viewer) is implemented: sheet layout, `Util`, `NTSCColor`, and `SpriteEditor` (both buttons, idempotent) are all built and importable. Verified against the first worked sprite from Chapter 3 page 8 -- the color viewer reproduces the solid-blue "5" shape exactly. Along the way we found and fixed a real gap in the NTSC color decision table: a colored 0-pixel (sandwiched between two 1s) must take its hue from its flanking 1-bit's column, not its own -- otherwise a repeating `0x55`-style byte renders as alternating stripes instead of the solid fill it's actually used for on real hardware. `RowColors` also now takes an absolute `iBaseCol` (plus optional true screen neighbors) instead of assuming the sprite sits at column 0, since color is a function of absolute screen position, not sprite-local position. 2026-09-10 Added multiple sheets, now per-sheet references. Experimented with changing the high bit column so that the sprite is shown without the empty column local to the sprite display range. Decision: high bit clumns can be hidden with a button. 2026-09-16 `papple2` is public on https://github.com/fschuhi/papple2.  
+**Where we are:** -- 2026-09-17
+Deliverable 1 (Sprite Editor/Viewer) is complete and hardened: both worked sprites from Chapter 3 page 8 are verified (the second, mixed-byte1 sprite this session, against the page-9 image pasted onto the sheet), the byte-boundary case (`HB0 != HB1`) has been tested on a dedicated sheet and confirmed to match real Apple II hardware behavior -- each byte's high bit governs only its own pixels' color, which the code already did correctly (NTSC color naming/RGB values and the hardware sourcing behind this are now in `README.md`). High-bit columns can be hidden via a button (`Button_HideHighBitColumns`).
+
+Phase 2 (Sprite Inventory) has working sprite-table infrastructure: `sprite_data.asm` is split into individual bytes; `SPRITE_DATA` reflows the raw 154-line/2288-byte stream (six 16-byte lines then one 8-byte line, repeating) into a clean 16-column grid; `Sprite Loader` computes a selected sprite's 22 byte addresses (the "why" of the byte-position-major storage layout is in `README.md`), and a `LoadSpriteFromTable` macro pulls those bytes into whichever editor sheet is active. All verified against sprite `$01`, both visually and by independently recomputing its bytes from the raw file. `papple2` is public on https://github.com/fschuhi/papple2.
 
 **What's next:**
-Verify the second (mixed-byte1) worked sprite from page 8, and the byte-boundary case from `TODO.md` (`HB0 ≠ HB1` on one row). Decide how the `Hex0`/`Hex1` masked-display columns (`PDF0`/`PDF1` in the current scratch copy) should live in the shipped layout, then fold that into the sheet-layout script. After that, either continue hardening Deliverable 1 or move to Phase 2 (Sprite Inventory). 2026-09-10 verified; discuss. 2026-09-16 You and I need an inventory of what could come next in the `xlsm`. 
+Sprite picker/dropdown for Phase 2 postponed -- typed sprite number in `Sprite Loader!C4` is the interface for now. Next session: Pixel Shifter (Phase 3), as the precursor to the Sprite Shifter (Phase 4).
 
 ---
 
@@ -26,16 +28,16 @@ The workbook also serves as a ground-truth reference for the `papple2` emulator:
 
 ## 🗺️ Phased roadmap
 
-### Phase 1 — Sprite Editor/Viewer ← we are here
+### Phase 1 — Sprite Editor/Viewer -- done 2026-09-17
 Build the core worksheet: pixel grid editor, NTSC color viewer, hex/bits byte display, two-button workflow (pixels → bytes, bytes → pixels). VBA-driven, no conditional formatting.
 
-### Phase 2 — Sprite Inventory
-Add a sheet with all 104 Lode Runner sprites from `sprite_data.asm`, reorganized from interleaved layout. Selectable into the editor via dropdown + Load button. Named sprite labels from the EQU defines.
+### Phase 2 — Sprite Inventory ← we are here
+Add a sheet with all 104 Lode Runner sprites from `sprite_data.asm`, reorganized from interleaved layout. Selectable into the editor via dropdown + Load button. Named sprite labels from the EQU defines. Core machinery (reflow table, address table, load macro) done 2026-09-17; dropdown/picker UI postponed.
 
 ### Phase 3 — Pixel Shifter
 Visualize the table-lookup chain from Chapter 3 §3.3: enter a 7-bit pattern and shift amount, watch the indirection through `PIXEL_SHIFT_PAGES`, `PIXEL_SHIFT_TABLE`, and `PIXEL_PATTERN_TABLE`. Scratchpad cells mirror 6502 register state at each step.
 
-### Phase 4 — Sprite Shifter
+### Phase 4 — Sprite Shifter (next session, per 2026-09-17 discussion -- order vs. Phase 3 TBD)
 Apply the Pixel Shifter to a full sprite (all 22 bytes), reproducing `COMPUTE_SHIFTED_SPRITE`. Show the OR step for the overlapping middle byte. Output loadable back into the editor.
 
 ### Phase 5 — Memory Map Viewer

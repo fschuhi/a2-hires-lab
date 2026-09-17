@@ -28,15 +28,15 @@ Public Function ColoredPixel(ByVal iScreenCol As Long, ByVal iHighBit As Long) A
     iParity = iScreenCol Mod 2
     If iHighBit = 0 Then
         If iParity = 0 Then
-            ColoredPixel = RGB(255, 0, 255)     ' Violet
+            ColoredPixel = RGB(255, 68, 253)    ' Violet/Purple
         Else
-            ColoredPixel = RGB(0, 255, 0)       ' Green
+            ColoredPixel = RGB(20, 245, 60)     ' Green
         End If
     Else
         If iParity = 0 Then
-            ColoredPixel = RGB(0, 192, 255)     ' Blue
+            ColoredPixel = RGB(20, 207, 253)    ' Blue
         Else
-            ColoredPixel = RGB(255, 192, 0)     ' Orange
+            ColoredPixel = RGB(255, 106, 60)    ' Orange
         End If
     End If
 End Function

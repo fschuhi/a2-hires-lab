@@ -14,9 +14,10 @@ tmp/project_tree.txt
 a2-hires-lab-design.md
 
 # standard project documentation (probably slightly out of sync)
-#README.md
+README.md
 GOALS.md
 TODO.md
+HISTORY.md
 
 ### --- Build & Python Configuration ---
 Makefile
@@ -28,6 +29,7 @@ requirements-win.txt
 
 ### --- Excel workbench ---
 #a2-hires-lab.xlsm
+src/bas/Buttons.bas
 src/bas/NTSCColor.bas
 src/bas/SpriteEditor.bas
 src/bas/Util.bas

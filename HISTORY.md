@@ -9,7 +9,22 @@
 
 ---
 
-## 2026-09-09 -- Deliverable 1 (Sprite Editor/Viewer) built and colour model fixed (Claude Sonnet 5)
+## 2026-09-17 -- Phase 2: Sprite inventory
+
+- Verified the second (mixed-byte1) worked sprite from Chapter 3 page 9 against the color viewer.
+- Tested the byte-boundary case (`HB0 != HB1`) on a dedicated sheet; confirmed against real Apple II hardware sources that each pixel's color comes from its own byte's high bit.
+- Updated `NTSCColor.bas`'s RGB values to historically accurate NTSC hues (kept the name "Violet").
+- Added `Button_HideHighBitColumns`.
+- Built Phase 2 core machinery: `sprite_data.asm` byte-split, `SPRITE_DATA` reflow table (flattens the raw 154-line/2288-byte stream into a clean 16-column grid), `Sprite Loader` address table (`AddrByte0`/`AddrByte1`), and `LoadSpriteFromTable` macro. Refactored `SpriteEditor.bas` to pass `ws` explicitly rather than relying on a hardcoded sheet name; added `Buttons.bas`. Verified against sprite `$01`.
+- Colored the two high-bit-set bytes found in `sprite_data.asm` (sprites 102/103) on `SPRITE_DATA`.
+
+## 2026-09-10 -- Multiple viewer/editor sheets
+
+- We now use local ranges for the Sprite Editor/Viewer sheets so that `sub`s and buttons work on the active sheet. 
+- Added Buttons on the sprite sheets.
+- Experimented with high bit columns (`HB0`, `HB1`) in order to show the 11x14 sprite without interspersed `HB0` column. Decision: hide the column instead of moving them around, so that the 2x8 bits layout is consistent. 
+
+## 2026-09-09 -- Phase 1: Sprite Editor/Viewer built and colour model fixed
 
 Implemented the full Deliverable 1 stack from the design doc: sheet layout (`openpyxl`, with a multi-area named-range bug fixed along the way), `Util` (hex/bit helpers, plus a `HexToBits` addition so Bits0/Bits1 run as live formulas), `NTSCColor`, and `SpriteEditor` with both idempotent buttons. `NTSCColor` also picked up a generalization -- absolute screen column and true left/right neighbors instead of an assumed isolated sprite at column 0 -- and, more importantly, a real fix: a colored 0-pixel takes its hue from its flanking 1-bit's column, not its own, without which a repeating `0x55` byte rendered as alternating stripes instead of the solid fill it's meant to produce. Verified by reproducing the chapter's worked "5"-shaped sprite pixel-for-pixel. Masked-hex display columns for comparing directly against the chapter's byte values were discussed but not yet built.
 
