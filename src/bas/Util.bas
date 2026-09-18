@@ -66,3 +66,9 @@ Public Function HexToBits(ByVal sHex As String) As String
     ' Callable directly from a worksheet cell, e.g. =HexToBits(R4)
     HexToBits = ByteToBits(HexToByte(sHex) And &H7F)
 End Function
+
+
+Function ReverseString(s As String) As String
+    ReverseString = StrReverse(s)
+End Function
+

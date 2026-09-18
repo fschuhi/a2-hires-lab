@@ -13,9 +13,6 @@ tmp/project_tree.txt
 # An Excel workbook for exploring Apple II hi-res graphics mechanics
 a2-hires-lab-design.md
 
-# Phase 3: Pixel Shifter -- design document
-PIXEL_SHIFTER_PREP.md
-
 # standard project documentation (probably slightly out of sync)
 README.md
 GOALS.md

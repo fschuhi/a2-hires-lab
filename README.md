@@ -6,6 +6,33 @@
 
 ![Description of image](img/sprite_editor_viewer.jpg)
 
+## Table of Contents
+
+- [Vision](#vision)
+- [Architecture](#architecture)
+  - [The two-button, idempotent contract](#the-two-button-idempotent-contract)
+- [The colour model](#the-colour-model)
+  - [NTSC Colors](#ntsc-colors)
+  - [Implementation](#implementation)
+- [Sprite Table Memory Layout](#sprite-table-memory-layout)
+- [The Shift Engine (Phase 3)](#the-shift-engine-phase-3)
+  - [The Core Problem: Runtime Shifting vs. Table Lookups](#the-core-problem-runtime-shifting-vs-table-lookups)
+  - [Why Exactly 512 Unique Patterns?](#why-exactly-512-unique-patterns)
+  - [The Shift Table Split Architecture](#the-shift-table-split-architecture)
+    - [Concrete Mapping Model (Shift 0 Example)](#concrete-mapping-model-shift-0-example)
+  - [Pipeline: From Screen Pixels to Shifted Output](#pipeline-from-screen-pixels-to-shifted-output)
+  - [Visual Mechanics Flow](#visual-mechanics-flow)
+  - [Educational Takeaways & Traps](#educational-takeaways--traps)
+- [Current status](#current-status)
+- [Settled decisions](#settled-decisions)
+- [Relation to sibling projects](#relation-to-sibling-projects)
+- [Prior art](#prior-art)
+- [Running](#running)
+  - [How correctness is currently verified](#how-correctness-is-currently-verified)
+- [Technical notes & gotchas](#technical-notes--gotchas)
+
+---
+
 ## Vision
 
 Not a general-purpose bitmap editor -- a lab. Each sheet illuminates one layer of the graphics machinery the disassembly documents: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen. The workbook is standalone from my `load-runner` disassembly project (misspelling intentional; no shared code, no shared repo) and draws its data and documentation directly from Chapter 3 of `main.nw` from XekriRemane's fantastic project https://github.com/XekriRedmane/lode_runner_reveng.
@@ -80,17 +107,122 @@ This is a deliberate trade for the 6502, which has no multiply instruction. Stor
 
 ---
 
+## The Shift Engine (Phase 3)
+
+### The Core Problem: Runtime Shifting vs. Table Lookups
+
+The Apple II screen renders pixels least-significant-bit (LSB) first. Moving an 11x14 sprite horizontally by arbitrary pixel offsets requires shifting its 7-pixel byte windows to the right by 0 to 6 pixels. When a 7-pixel pattern shifts right, it overflows into a second screen byte, spanning a 14-pixel wide, 2-byte field.
+
+On a 1 MHz 6502, performing 14-bit runtime bit-shifts across 22 bytes per sprite at 60 Hz would consume excessive CPU cycles. Doug Smith solved this by performing **no runtime bit-shifting at all**. Instead, *Lode Runner* uses a pre-calculated two-stage dictionary lookup:
+
+$$\text{Input 7-Pixel Pattern } (Y) + \text{Shift Amount } (S) \longrightarrow \text{Ready-to-blit Two Screen Bytes } (B_0, B_1) \text{}$$
+
+### Why Exactly 512 Unique Patterns?
+
+A naive lookup table mapping every 7-bit input ($2^7 = 128$) across 7 shift positions ($0 \dots 6$) would require $128 \times 7 = 896$ two-byte pairs. However, many different input-shift combinations produce identical visual outputs on screen (e.g. a single pixel at position 0 shifted by 4 looks identical to a single pixel at position 4 shifted by 0).
+
+*Lode Runner* stores only mathematically unique 14-pixel visual outcomes. Shifting a 7-pixel window by 0 to 6 positions only ever populates columns 0 to 12 of the 14-pixel field (column 13 is never touched). Counting every valid output pattern where the distance between the first and last lit pixel is at most 6 yields:
+
+- **Width 1:** 1 shape $\times\ 13$ positions $= 13$
+- **Width 2:** 1 shape ($2^0$) $\times\ 12$ positions $= 12$
+- **Width 3:** 2 shapes ($2^1$) $\times\ 11$ positions $= 22$
+- **Width 4:** 4 shapes ($2^2$) $\times\ 10$ positions $= 40$
+- **Width 5:** 8 shapes ($2^3$) $\times\ 9$ positions $= 72$
+- **Width 6:** 16 shapes ($2^4$) $\times\ 8$ positions $= 128$
+- **Width 7:** 32 shapes ($2^5$) $\times\ 7$ positions $= 224$
+
+Summing these gives **511 unique non-zero shapes**. Adding the 1 all-zero pattern brings the grand total to **exactly 512 unique visual outcomes**. At 2 bytes per entry, `pixel_pattern_table.asm` requires exactly 1,024 bytes, filling four consecutive 256-byte 6502 pages (`$A900` to `$ACFF`) with zero padding.
+
+### The Shift Table Split Architecture
+
+To locate the 2-byte target in the 512-entry gallery, the engine consults `pixel_shift_table.asm`. Because 6502 index registers (`X`, `Y`) are 8-bit ($0 \dots 255$), indexed addressing cannot load a 16-bit address directly. 
+
+Each shift amount ($0 \dots 6$) is given its own 256-byte page in memory (`$A200` to `$A800`), split into two 128-byte halves:
+1. **Low Bytes (Offsets):** The first 128 bytes of the page (`$00 \dots $7F`), containing the target offset within `$A900`–`$ACFF`.
+2. **High Bytes (Pages):** The second 128 bytes of the page (`$80 \dots $FF`), containing the target page high byte (`$A9`, `$AA`, `$AB`, or `$AC`).
+
+The shift page base is looked up via `PIXEL_SHIFT_PAGES` (`$84C1`: `$A2, $A3, $A4, $A5, $A6, $A7, $A8`). The 6502 retrieves the 16-bit address with two single-cycle indexed loads:
+```assembly
+LDA (TMP_PTR), Y       ; TMP_PTR=$A200..$A800 -> reads target Offset (Lo)
+LDA (TMP_PTR+128), Y   ; TMP_PTR=$A280..$A880 -> reads target Page (Hi)
+```
+
+#### Concrete Mapping Model (Shift 0 Example)
+
+Viewing these split arrays as a unified 3-column map shows how the 7-bit key index directly resolves into the 16-bit target address:
+
+| Key: Input Byte (Binary) | Value 1: Low Byte (Offset) | Value 2: High Byte (Page) | Resulting Target Address |
+| :--- | :--- | :--- | :--- |
+| `%00000000` (0) | `$00` (Index 0) | `$A9` (Index 128) | `$A900` |
+| `%00000001` (1) | `$02` (Index 1) | `$A9` (Index 129) | `$A902` |
+| `%00000010` (2) | `$04` (Index 2) | `$A9` (Index 130) | `$A904` |
+| `%00000011` (3) | `$12` (Index 3) | `$A9` (Index 131) | `$A912` |
+| ... | ... | ... | ... |
+| `%00100000` (32) | `$0C` (Index 32) | `$A9` (Index 160) | `$A90C` |
+| `%00100001` (33) | `$02` (Index 33) | `$AA` (Index 161) | `$AA02` |
+| `%00100010` (34) | `$84` (Index 34) | `$A9` (Index 162) | `$A984` |
+| `%00100011` (35) | `$12` (Index 35) | `$AA` (Index 163) | `$AA12` |
+
+Starting at input index 33, the High Byte alternates between `$A9` and `$AA` because the target shapes cross the physical 256-byte hardware page boundary in memory.
+
+### Pipeline: From Screen Pixels to Shifted Output
+
+The entire lookup and conversion follows a strict 5-stage pipeline:
+
+1. **Input Pixel Reversal:** The visual 7-pixel input window ($P_0 \dots P_6$) is reversed into 6502 storage bit order (`%b6..b0`) to produce key $Y \in [0..127]$.
+2. **Page Dispatch:** The shift amount $S \in [0..6]$ indexes `PIXEL_SHIFT_PAGES` to select table page `$A2 + S`.
+3. **Shift Table Lookup:** Key $Y$ indexes the first 128 bytes to read `Lo` and the second 128 bytes (`Y + 128`) to read `Hi`.
+4. **Pattern Table Resolution:** Target address `$HiLo` reads Output Byte 0, and `$HiLo + 1` reads Output Byte 1 from `$A900`–`$ACFF`.
+5. **Output Unpacking:** Bit 7 (NTSC color bit) is masked off each byte, and bits 0–6 are reversed back to visual screen pixel order, yielding the shifted 14-pixel field.
+
+### Visual Mechanics Flow
+
+```mermaid
+flowchart TD
+    subgraph Inputs ["Input 7-Pixel Window"]
+        PX["Screen Pixels: P0..P6<br/>e.g. 0110100"] -->|LSB-first flip| Y["Key Y (0..127)<br/>%0010110 ($16)"]
+        S["Shift S (0..6)<br/>in Reg X"]
+    end
+
+    subgraph Stage1 ["Stage 1: Hardware Page Dispatch"]
+        S -->|LDA PIXEL_SHIFT_PAGES, X| SP["Shift Page<br/>$A2 + S (e.g. $A5)"]
+    end
+
+    subgraph Stage2 ["Stage 2: Shift Table (256-byte page)"]
+        SP & Y -->|LDA (page, 00), Y| LO["Offset Lo<br/>(from first 128B)"]
+        SP & Y -->|LDA (page, 80), Y| HI["Target Page Hi<br/>(from second 128B)"]
+    end
+
+    subgraph Stage3 ["Stage 3: Pattern Table Gallery ($A900-$ACFF)"]
+        HI & LO -->|16-bit Target Address| ADDR["Address: $PageLo<br/>e.g. $A95A"]
+        ADDR -->|Read 2 Bytes| B0["Byte 0 (e.g. $94)<br/>%10010100"]
+        ADDR -->|Read +1 Byte| B1["Byte 1 (e.g. $82)<br/>%10000010"]
+    end
+
+    subgraph Outputs ["Output 14-Pixel Screen Window"]
+        B0 -->|Strip bit 7, flip LSB| OUT0["Pixels 0..6 (Byte 0)"]
+        B1 -->|Strip bit 7, flip LSB| OUT1["Pixels 7..13 (Byte 1)"]
+        OUT0 & OUT1 --> SCREEN["Shifted 14 Pixels<br/>0000110 0100000"]
+    end
+```
+
+### Educational Takeaways & Traps
+
+- **Pixels vs. Storage Bits:** On the Apple II, pixels are drawn left-to-right on screen, but stored least-significant-bit first ($P_0 = \text{bit } 0, P_6 = \text{bit } 6$). For example, pixels `0110100` reverse to `%0010110` ($22$ decimal). Looking up patterns using screen pixel order rather than storage bit order will hit the wrong table entries.
+- **Pattern Table Returns Bytes, Not Pixels:** `pixel_pattern_table.asm` does not store pixel bitstrings. It holds raw screen bytes with bit 7 forced to $1$ (for high-bit NTSC orange/blue artifacting). To display or inspect them as pixels, bit 7 must be masked off and the remaining 7 bits reversed back to screen order.
+- **Hardware Page Bouncing:** The High Bytes in `pixel_shift_table.asm` bounce between `$A9`, `$AA`, `$AB`, and `$AC` because target addresses cross physical 256-byte boundaries in RAM as shift offsets grow. Storing page and offset in split arrays eliminates 16-bit pointer arithmetic during gameplay.
+
+---
+
 ## Current status
 
 | # | Sheet | Status | Description |
 |---|-------|--------|-------------|
-| 1 | Sprite Editor/Viewer | **in progress** | Layout, `Util`, `NTSCColor`, `SpriteEditor` all built; first worked sprite verified pixel-for-pixel |
-| 2 | Sprite Inventory | planned | All 104 sprites from `sprite_data.asm`, selectable into the editor |
-| 3 | Pixel Shifter | planned | 7-bit pattern x shift amount -> two result bytes via table lookups |
+| 1 | Sprite Editor/Viewer | complete | Layout, `Util`, `NTSCColor`, `SpriteEditor` all built; verified pixel-for-pixel |
+| 2 | Sprite Inventory | complete | Core machinery (`SPRITE_DATA` reflow table, address table, load macro) built; dropdown UI postponed |
+| 3 | Pixel Shifter | complete | Reorganized 7-shift unified map and direct 2-stage dictionary lookup (`PixelShiftPages` -> `pixel_shift_table.asm` -> `pixel_pattern_table.asm`) |
 | 4 | Sprite Shifter | planned | Full `COMPUTE_SHIFTED_SPRITE` for an 11-row sprite |
 | 5 | Memory Map Viewer | idea | Two sheets showing HGR1/HGR2 pixel/color state |
-
-Deliverable 1's remaining open items: verify the second (mixed-byte1) worked sprite from page 8, verify the `HB0 != HB1` byte-boundary case, and decide where masked-hex display columns live in the shipped layout (see `TODO.md`).
 
 **Build mechanic:** the sheet layout is generated (`openpyxl`) and the VBA modules are authored as plain-text `.bas` files, imported into Excel by hand rather than fabricated as a binary `.xlsm` -- see Technical notes below for why. Confirmed working round-trip: a real Excel-saved `.xlsm`'s VBA source can be read back losslessly via `oletools`/`olevba`, which is how future sessions read the modules directly from `a2-hires-lab.xlsm` instead of needing separate `.bas` copies in the filesdump.
 
@@ -107,6 +239,7 @@ Deliverable 1's remaining open items: verify the second (mixed-byte1) worked spr
 - **`Hex0`/`Hex1` store the byte as the game actually holds it (high bit included), not as the chapter prints it.** E.g. the chapter's `0x55` is `0xD5` in `Hex0` once `HB0` defaults to 1. A known, minor mismatch for eyeballing against the PDF -- not a bug (see `TODO.md`).
 - **Sheet layout as generated `.xlsx` + hand-imported `.bas` text modules, not a fabricated `.xlsm`.** Neither this environment nor LibreOffice can reliably emit a genuine Excel-compatible VBA binary from outside Excel; importing separately-authored text modules is reliable and keeps VBA source under version control as plain text.
 - **`HB0`/`HB1` default to 1** in a freshly laid-out editor, matching what the game actually does at runtime (`sprite_data.asm`'s raw bytes are 7-bit, 0x00-0x7F; the high bit is OR'd in elsewhere in the game's own pipeline).
+- **Direct table access for Pixel Shifting.** Shift lookups route directly through `PIXEL_SHIFT_PAGES` into `pixel_shift_table.asm` and `pixel_pattern_table.asm` rather than relying on intermediate display representations, keeping logic faithful to 6502 memory architecture.
 
 ---
 

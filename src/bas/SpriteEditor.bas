@@ -22,6 +22,15 @@ Private Const COL_HB1 As Long = 17           ' Q
 Private Const COL_HEX0 As Long = 18          ' R
 Private Const COL_HEX1 As Long = 19          ' S
 
+Const WS_SPRITE_DATA = "SPRITE_DATA"
+Const R_SpriteBaseAddress = "SpriteBaseAddress"
+Const R_AddrByte0 = "AddrByte0"
+Const R_AddrByte1 = "AddrByte1"
+Const R_HexByte0 = "HexByte0"
+Const R_HexByte1 = "HexByte1"
+Const R_SpriteData = "SpriteData"
+
+
 Private Function PixelCol(ByVal iCol As Long) As Long
     ' Pixel columns 0-6 -> B-H (2-8); pixel columns 7-13 -> J-P (10-16).
     ' Column I (9) is the visual gap between the two bytes -- never a
@@ -32,6 +41,7 @@ Private Function PixelCol(ByVal iCol As Long) As Long
         PixelCol = iCol + 3
     End If
 End Function
+
 
 Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
                                    ByVal iByteIdx As Long, ByVal iHB As Long) As Long
@@ -50,7 +60,8 @@ Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
     PixelsToByteValue = lVal
 End Function
 
-Public Sub UpdateViewer(ws As Worksheet)
+Public Sub UpdateViewer(wsSpriteViewer As Worksheet)
+    Application.ScreenUpdating = False
     Dim aiPixels(0 To 10, 0 To 13) As Long
     Dim aiHB(0 To 10, 0 To 1) As Long
     Dim iRow As Long, iCol As Long
@@ -58,10 +69,10 @@ Public Sub UpdateViewer(ws As Worksheet)
     ' 1. Read the editor grid (pixels + high bits) into arrays.
     For iRow = 0 To 10
         For iCol = 0 To 13
-            aiPixels(iRow, iCol) = ws.Cells(ROW_FIRST + iRow, PixelCol(iCol)).Value
+            aiPixels(iRow, iCol) = wsSpriteViewer.Cells(ROW_FIRST + iRow, PixelCol(iCol)).Value
         Next iCol
-        aiHB(iRow, 0) = ws.Cells(ROW_FIRST + iRow, COL_HB0).Value
-        aiHB(iRow, 1) = ws.Cells(ROW_FIRST + iRow, COL_HB1).Value
+        aiHB(iRow, 0) = wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HB0).Value
+        aiHB(iRow, 1) = wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HB1).Value
     Next iRow
 
     ' 2. Compute and write Hex0/Hex1 for every row (Bits0/Bits1 follow
@@ -70,15 +81,19 @@ Public Sub UpdateViewer(ws As Worksheet)
     For iRow = 0 To 10
         lByte0 = PixelsToByteValue(aiPixels, iRow, 0, aiHB(iRow, 0))
         lByte1 = PixelsToByteValue(aiPixels, iRow, 1, aiHB(iRow, 1))
-        ws.Cells(ROW_FIRST + iRow, COL_HEX0).Value = ByteToHex(lByte0)
-        ws.Cells(ROW_FIRST + iRow, COL_HEX1).Value = ByteToHex(lByte1)
+        wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HEX0).Value = ByteToHex(lByte0)
+        wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HEX1).Value = ByteToHex(lByte1)
     Next iRow
 
     ' 3. Paint the viewer from the pixels just read.
-    PaintViewer ws, aiPixels, aiHB
+    PaintViewer wsSpriteViewer, aiPixels, aiHB
+    Application.ScreenUpdating = True
 End Sub
 
-Public Sub LoadFromBytes(ws As Worksheet)
+
+Public Sub LoadFromBytes(wsSpriteViewer As Worksheet)
+    Application.ScreenUpdating = False
+    
     Dim aiPixels(0 To 10, 0 To 13) As Long
     Dim aiHB(0 To 10, 0 To 1) As Long
     Dim iRow As Long, iCol As Long
@@ -86,8 +101,8 @@ Public Sub LoadFromBytes(ws As Worksheet)
 
     ' 1. Read Hex0/Hex1 and decode into pixels + high bits.
     For iRow = 0 To 10
-        lByte0 = HexToByte(ws.Cells(ROW_FIRST + iRow, COL_HEX0).Value)
-        lByte1 = HexToByte(ws.Cells(ROW_FIRST + iRow, COL_HEX1).Value)
+        lByte0 = HexToByte(wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HEX0).Value)
+        lByte1 = HexToByte(wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HEX1).Value)
 
         aiHB(iRow, 0) = GetBit(lByte0, 7)
         aiHB(iRow, 1) = GetBit(lByte1, 7)
@@ -104,17 +119,19 @@ Public Sub LoadFromBytes(ws As Worksheet)
     '    every run, so this is idempotent regardless of prior state.
     For iRow = 0 To 10
         For iCol = 0 To 13
-            ws.Cells(ROW_FIRST + iRow, PixelCol(iCol)).Value = aiPixels(iRow, iCol)
+            wsSpriteViewer.Cells(ROW_FIRST + iRow, PixelCol(iCol)).Value = aiPixels(iRow, iCol)
         Next iCol
-        ws.Cells(ROW_FIRST + iRow, COL_HB0).Value = aiHB(iRow, 0)
-        ws.Cells(ROW_FIRST + iRow, COL_HB1).Value = aiHB(iRow, 1)
+        wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HB0).Value = aiHB(iRow, 0)
+        wsSpriteViewer.Cells(ROW_FIRST + iRow, COL_HB1).Value = aiHB(iRow, 1)
     Next iRow
 
     ' 3. Paint the viewer from the pixels just decoded.
-    PaintViewer ws, aiPixels, aiHB
+    PaintViewer wsSpriteViewer, aiPixels, aiHB
+    Application.ScreenUpdating = True
 End Sub
 
-Public Sub LoadSpriteFromTable(ws As Worksheet)
+
+Public Sub LoadSpriteFromTable(wsSpriteViewer As Worksheet)
     ' Pulls the 11 rows of the currently selected sprite (Sprite Loader!C4)
     ' out of SPRITE_DATA, using the addresses already computed in
     ' AddrByte0/AddrByte1 on "Sprite Loader". The high bit is forced on
@@ -126,11 +143,11 @@ Public Sub LoadSpriteFromTable(ws As Worksheet)
     ' sheet), so the unqualified Range(...) calls below resolve to
     ' whichever such sheet is currently active -- same as typing into
     ' those cells by hand would.
-    Dim wsData As Worksheet
-    Set wsData = ThisWorkbook.Worksheets("SPRITE_DATA")
+    Dim wsData As Worksheet: Set wsData = ThisWorkbook.Worksheets(WS_SPRITE_DATA)
+    Dim rSpriteData As Range: Set rSpriteData = Range(R_SpriteData)
 
     Dim lBaseAddr As Long
-    lBaseAddr = HexToByte(Range("SpriteBaseAddress").Value)
+    lBaseAddr = HexToByte(Range(R_SpriteBaseAddress).Value)
 
     Dim iRow As Long
     Dim lAddr As Long, lIdx As Long
@@ -139,30 +156,35 @@ Public Sub LoadSpriteFromTable(ws As Worksheet)
 
     For iRow = 1 To 11
         ' -- byte 1 --
-        lAddr = HexToByte(Range("AddrByte0").Cells(iRow).Value)
+        lAddr = HexToByte(Range(R_AddrByte0).Cells(iRow).Value)
         lIdx = lAddr - lBaseAddr
-        iDataRow = 3 + lIdx \ 16
-        iDataCol = 3 + (lIdx Mod 16)
-        lByte = HexToByte(wsData.Cells(iDataRow, iDataCol).Value)
+        
+        iDataRow = lIdx \ 16
+        iDataCol = lIdx Mod 16
+        lByte = HexToByte(rSpriteData.Cells(iDataRow + 1, iDataCol + 1).Value)
+        
         lByte = SetBit(lByte, 7, 1)
-        ws.Range("HexByte0").Cells(iRow).Value = ByteToHex(lByte)
+        wsSpriteViewer.Range(R_HexByte0).Cells(iRow).Value = ByteToHex(lByte)
 
         ' -- byte 2 --
-        lAddr = HexToByte(Range("AddrByte1").Cells(iRow).Value)
+        lAddr = HexToByte(Range(R_AddrByte1).Cells(iRow).Value)
         lIdx = lAddr - lBaseAddr
-        iDataRow = 3 + lIdx \ 16
-        iDataCol = 3 + (lIdx Mod 16)
-        lByte = HexToByte(wsData.Cells(iDataRow, iDataCol).Value)
+        
+        iDataRow = lIdx \ 16
+        iDataCol = lIdx Mod 16
+        lByte = HexToByte(rSpriteData.Cells(iDataRow + 1, iDataCol + 1).Value)
+
         lByte = SetBit(lByte, 7, 1)
-        ws.Range("HexByte1").Cells(iRow).Value = ByteToHex(lByte)
+        wsSpriteViewer.Range(R_HexByte1).Cells(iRow).Value = ByteToHex(lByte)
     Next iRow
 
     ' Decompose into pixels + HB and paint the viewer, exactly once,
     ' after all 11 rows have been written.
-    LoadFromBytes ws
+    LoadFromBytes wsSpriteViewer
 End Sub
 
-Private Sub PaintViewer(ByVal ws As Worksheet, aiPixels() As Long, aiHB() As Long)
+
+Private Sub PaintViewer(ByVal wsSpriteViewer As Worksheet, aiPixels() As Long, aiHB() As Long)
     ' Shared by both buttons: given pixels + HB already in memory, repaint
     ' every viewer cell. iBaseCol is always 0 here -- Deliverable 1 shows
     ' the sprite in isolation, matching the chapter's own worked examples.
@@ -178,7 +200,8 @@ Private Sub PaintViewer(ByVal ws As Worksheet, aiPixels() As Long, aiHB() As Lon
         vColors = RowColors(aiRow, aiHB(iRow, 0), aiHB(iRow, 1), 0)
 
         For iCol = 0 To 13
-            ws.Cells(VIEWER_ROW_FIRST + iRow, PixelCol(iCol)).Interior.Color = vColors(iCol)
+            wsSpriteViewer.Cells(VIEWER_ROW_FIRST + iRow, PixelCol(iCol)).Interior.Color = vColors(iCol)
         Next iCol
     Next iRow
 End Sub
+
