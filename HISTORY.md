@@ -9,6 +9,20 @@
 
 ---
 
+## 2026-09-18 -- Phase 3: Pixel shifter
+
+- Added the unified 7-shift mapping sheet `Pixel Shift Table`, laying out all 128 input patterns (keys 0..127) across 7 side-by-side shift blocks. Structured coordinates in rows 2 and 3 enabled a single universal formula across all 1,792 data cells, linking directly to the raw byte grid on `pixel_shift_table.asm`.
+- Added physical address columns on `pixel_shift_table.asm` ($A200..$A8FF) and `pixel_pattern_table.asm` ($A900..$ACFF), visually anchoring the 2x 128-byte half-page split and hardware page dispatch (`PIXEL_SHIFT_PAGES`).
+- Defined the named range `PixelShiftTable` on `pixel_shift_table.asm` to decouple VBA and sheet formula access from raw column shifts.
+- Completed the `Pixel Shifter` sheet, implementing the complete 5-stage shift pipeline:
+  1. Reversing screen pixel inputs (`0110100`) to 6502 storage bit order (`%0010110` / decimal 22) via `ReverseString`.
+  2. Resolving the physical shift page via `PixelShiftPages` ($A2..$A8).
+  3. Reading the split 16-bit pattern address (`Lo` from the first 128 bytes, `Hi` from the second 128 bytes).
+  4. Resolving the two output bytes from the 512-entry gallery in `pixel_pattern_table.asm`.
+  5. Stripping the high color bit (bit 7) and reflecting the resulting bits back into screen pixel order across columns C:P.
+- Provided a dedicated second evaluation block on `Pixel Shifter` using 2D matrix arithmetic (`INT(offset / COLUMNS) + 1`, `MOD(offset, COLUMNS) + 1`) to ensure full transparency and navigability via Ariexcel and the Excel formula auditing detective.
+- Integrated the full `PIXEL_SHIFTER_PREP.md` mechanics, mathematical breakdown (512 unique shapes across widths 1..7), 3-column mapping table, and Mermaid visual flow diagram directly into `README.md`.
+
 ## 2026-09-17 -- Phase 2: Sprite inventory
 
 - Verified the second (mixed-byte1) worked sprite from Chapter 3 page 9 against the color viewer.

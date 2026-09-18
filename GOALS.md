@@ -8,13 +8,28 @@
 
 ## 📍 Current Session Pointer
 
-**Where we are:** -- 2026-09-17
-Deliverable 1 (Sprite Editor/Viewer) is complete and hardened: both worked sprites from Chapter 3 page 8 are verified (the second, mixed-byte1 sprite this session, against the page-9 image pasted onto the sheet), the byte-boundary case (`HB0 != HB1`) has been tested on a dedicated sheet and confirmed to match real Apple II hardware behavior -- each byte's high bit governs only its own pixels' color, which the code already did correctly (NTSC color naming/RGB values and the hardware sourcing behind this are now in `README.md`). High-bit columns can be hidden via a button (`Button_HideHighBitColumns`).
+## Where we are -- 2026-09-19
+
+- **Phase 1 (Sprite Editor/Viewer) Complete:** Built the foundational 11x14 editing grid with pixel/byte dual-representation and strict idempotent macro contracts. The full NTSC nearest-neighbor color decision table is implemented in `NTSCColor.bas` and verified pixel-for-pixel against Chapter 3's worked examples.
+- **Phase 2 (Sprite Inventory) Complete:** Reflowed `sprite_data.asm` from its byte-position-major 6502 storage format (stride 104) into human-readable 22-byte sprite rows. Added the address lookup table and loader macro on `Sprite Loader`.
+- **Phase 3 (Pixel Shifter) Complete:** Built the unified 7-shift `Pixel Shift Table` with a single universal formula mapping all 1,792 entries directly to `pixel_shift_table.asm`. Constructed the live 2-stage dictionary engine on `Pixel Shifter` (`PIXEL_SHIFT_PAGES` -> `pixel_shift_table.asm` -> `pixel_pattern_table.asm`) with both `TOROW` and Ariexcel-navigable 2D matrix formulas, fully documenting the 512-pattern mechanics and architecture in `README.md`.
 
 Phase 2 (Sprite Inventory) has working sprite-table infrastructure: `sprite_data.asm` is split into individual bytes; `SPRITE_DATA` reflows the raw 154-line/2288-byte stream (six 16-byte lines then one 8-byte line, repeating) into a clean 16-column grid; `Sprite Loader` computes a selected sprite's 22 byte addresses (the "why" of the byte-position-major storage layout is in `README.md`), and a `LoadSpriteFromTable` macro pulls those bytes into whichever editor sheet is active. All verified against sprite `$01`, both visually and by independently recomputing its bytes from the raw file. `papple2` is public on https://github.com/fschuhi/papple2.
 
-**What's next:**
-Sprite picker/dropdown for Phase 2 postponed -- typed sprite number in `Sprite Loader!C4` is the interface for now. Next session: Pixel Shifter (Phase 3), as the precursor to the Sprite Shifter (Phase 4). For the beginning of the conversation, Let's work through the `PIXEL_SHIFTER_PREP.md` together and think about how to change existing sheets or add new ones that help me understand how things hang together. Suggestion: We add a new sheet to reorganize the `pixel_shift_table.asm`, with live links to the hex values of that sheet, so that the new sheet shows the map (key = index, value1 = low byte, value 2 = high byte). Feedback welcome!
+## What's Next: Phase 4 (Sprite Shifter)
+
+Begin Phase 4 by implementing the full horizontal sprite shifting engine based on `COMPUTE_SHIFTED_SPRITE` (Chapter 3, page 10):
+
+1. **Inventory & Disassembly Analysis:**
+   - Catalog the routine from `main.nw` that accepts a sprite index (`0..103`) and shift amount (`0..6`) and populates the 33-byte `BLOCK_DATA` area (11 rows × 3 bytes).
+   - Document the middle-byte bitwise OR step where shifted Byte 0 overflow merges with the beginning of shifted Byte 1.
+
+2. **Workbook Architecture (`Sprite Shifter` Sheet):**
+   - Implement a dedicated `Sprite Shifter` sheet featuring:
+     - Sprite selection (via index) and Shift input (`0..6`).
+     - A structured `BLOCK_DATA` memory staging range ($11 \times 3$ raw bytes).
+     - A 21-pixel wide Color Viewer (3 screen bytes × 7 dots, 11 rows high) utilizing `NTSCColor.bas` to visualize the sprite smoothly crossing byte boundaries.
+     - A VBA macro or live formulas linking the Phase 3 shift machinery directly to the 11 rows of sprite data.
 
 ---
 
