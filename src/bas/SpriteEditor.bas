@@ -182,5 +182,3 @@ Private Sub PaintViewer(ByVal ws As Worksheet, aiPixels() As Long, aiHB() As Lon
         Next iCol
     Next iRow
 End Sub
-
-

@@ -14,7 +14,7 @@ Deliverable 1 (Sprite Editor/Viewer) is complete and hardened: both worked sprit
 Phase 2 (Sprite Inventory) has working sprite-table infrastructure: `sprite_data.asm` is split into individual bytes; `SPRITE_DATA` reflows the raw 154-line/2288-byte stream (six 16-byte lines then one 8-byte line, repeating) into a clean 16-column grid; `Sprite Loader` computes a selected sprite's 22 byte addresses (the "why" of the byte-position-major storage layout is in `README.md`), and a `LoadSpriteFromTable` macro pulls those bytes into whichever editor sheet is active. All verified against sprite `$01`, both visually and by independently recomputing its bytes from the raw file. `papple2` is public on https://github.com/fschuhi/papple2.
 
 **What's next:**
-Sprite picker/dropdown for Phase 2 postponed -- typed sprite number in `Sprite Loader!C4` is the interface for now. Next session: Pixel Shifter (Phase 3), as the precursor to the Sprite Shifter (Phase 4).
+Sprite picker/dropdown for Phase 2 postponed -- typed sprite number in `Sprite Loader!C4` is the interface for now. Next session: Pixel Shifter (Phase 3), as the precursor to the Sprite Shifter (Phase 4). For the beginning of the conversation, Let's work through the `PIXEL_SHIFTER_PREP.md` together and think about how to change existing sheets or add new ones that help me understand how things hang together. Suggestion: We add a new sheet to reorganize the `pixel_shift_table.asm`, with live links to the hex values of that sheet, so that the new sheet shows the map (key = index, value1 = low byte, value 2 = high byte). Feedback welcome!
 
 ---
 
