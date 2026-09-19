@@ -10,7 +10,7 @@
 
 Not a general-purpose bitmap editor -- a lab. Each sheet illuminates one layer of the graphics machinery the disassembly documents: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen. The workbook is standalone from my `load-runner` disassembly project (not yet public; misspelling intentional; no shared code, no shared repo) and draws its data and documentation directly from Chapter 3 of `main.nw` from XekriRedmane's fantastic project https://github.com/XekriRedmane/lode_runner_reveng.
 
-One surprise along the way: the game's two-stage shift lookup uses 2,816 bytes of tables, but the same result fits in a single 1,792-byte table -- which would also make the lookup faster -- see [Architectural Analysis](#architectural-analysis-the-indirection-mystery--direct-table-optimization).
+One surprise along the way: the game's two-stage shift lookup uses 2,816 bytes of tables, but the same result fits in a single 1,792-byte table -- which would also cut the sprite-shifting routine from about 1,820 to about 1,210 CPU cycles -- see [Architectural Analysis](#architectural-analysis-the-indirection-mystery--direct-table-optimization).
 
 ---
 
@@ -27,7 +27,7 @@ One surprise along the way: the game's two-stage shift lookup uses 2,816 bytes o
 | `Pixel Shift Table` | All 128 patterns x 7 shifts on one sheet, each resolved to its target address |
 | `Pixel Shift Pattern Table` | The shift tables rewritten as one direct 1,792-byte table |
 | `Sprite Shifter` | Shift a whole sprite by 0-6 pixels and watch it spread into a third byte |
-| Data sheets | The original tables from the disassembly, parsed into cells: `sprite_data.asm`, `SPRITE_DATA`, `Sprite Loader`, `pixel_shift_table.asm`, `pixel_pattern_table.asm`, `Pixel Shift Pages` |
+| Data sheets | The original tables from the disassembly, parsed into cells: `sprite_data.asm`, `Sprite Data`, `Sprite Loader`, `pixel_shift_table.asm`, `pixel_pattern_table.asm`, `Pixel Shift Pages` |
 
 Planned: a Memory Map Viewer for the HGR pages.
 
@@ -41,7 +41,7 @@ Planned: a Memory Map Viewer for the HGR pages.
 
 ## Running
 
-**Excel version.** The workbook needs Excel for Microsoft 365 or Excel 2024, on Windows or Mac. Several sheets use `TOROW`, and `SPRITE_DATA` uses `LET`; older versions show `#NAME?` in those cells. On `Pixel Shifter`, the second of the three blocks ("2D range") does the same lookup without `TOROW`. Excel for the web can open the file but cannot run macros. LibreOffice has not been tested. The workbench was built for my own exploration, so I have not tried to support older versions. Developed and tested with Excel for Microsoft 365 on Windows 11.
+**Excel version.** The workbook needs Excel for Microsoft 365 or Excel 2024, on Windows or Mac. Several sheets use `TOROW`, and `Sprite Data` uses `LET`; older versions show `#NAME?` in those cells. On `Pixel Shifter`, the second of the three blocks ("2D range") does the same lookup without `TOROW`. Excel for the web can open the file but cannot run macros. LibreOffice has not been tested. The workbench was built for my own exploration, so I have not tried to support older versions. Developed and tested with Excel for Microsoft 365 on Windows 11.
 
 **Macros.** `a2-hires-lab.xlsm` contains VBA macros, and parts of the workbook depend on them: the buttons on the sprite sheets, and custom functions such as `ReverseString` and `HexToBits` that worksheet formulas call. Without macros, those cells show `#NAME?`. Windows Excel blocks macros in files downloaded from the internet. Before opening the file, right-click it in Explorer, choose Properties, and tick "Unblock" on the General tab. On Mac, Excel asks whether to enable macros when the file opens. All VBA source is also in `src/bas/` as plain text, so you can read it before enabling anything.
 
@@ -50,11 +50,11 @@ make setup        # create venv, install dependencies (papple2-side, not yet use
 make filesdump     # regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
 ```
 
-The workbook itself has no build step yet: open `a2-hires-lab.xlsm` directly in Excel. `Update Viewer` and `Load from Bytes` are Form Control buttons on the `Sprite Editor-Viewer` sheet, wired to `SpriteEditor.UpdateViewer` / `SpriteEditor.LoadFromBytes`.
+The workbook itself has no build step yet: open `a2-hires-lab.xlsm` directly in Excel. `Update Viewer` and `Load from Bytes` are Form Control buttons on each sprite sheet (e.g. `Sprite (load)`), wired to `Buttons.Button_UpdateViewer` / `Buttons.Button_LoadFromBytes`, which call `SpriteEditor.UpdateViewer` / `SpriteEditor.LoadFromBytes` for the active sheet.
 
 ### How correctness is currently verified
 
-There's no automated test suite yet. Correctness is checked by hand against Chapter 3 page 8's two worked sprite examples: type the pixel data into the editor (`HB0`/`HB1` default to 1), click `Update Viewer`, and compare the color viewer against the chapter's own rendered figure, pixel for pixel. The first ("5"-shaped, `byte1` always `0x00`) sprite is confirmed correct; the second (mixed-`byte1`) sprite and the `HB0 != HB1` byte-boundary case are still open. Once fixtures are derived for `papple2`, this becomes an automated `pytest` suite on that side instead.
+There's no automated test suite yet. Correctness is checked by hand against Chapter 3 page 8's two worked sprite examples: type the pixel data into the editor (`HB0`/`HB1` default to 1), click `Update Viewer`, and compare the color viewer against the chapter's own rendered figure, pixel for pixel. Both sprites are confirmed correct: the first ("5"-shaped, `byte1` always `0x00`) on `Sprite (S)`, the second (mixed-`byte1`) on `Sprite (Player)`. The `HB0 != HB1` byte-boundary case is checked on `Sprite (HB0<>HB1)`. Once fixtures are derived for `papple2`, this becomes an automated `pytest` suite on that side instead.
 
 ---
 
@@ -141,7 +141,7 @@ This is a deliberate trade for the 6502, which has no multiply instruction. Stor
 
 The Apple II screen renders pixels least-significant-bit (LSB) first. Moving an 11x14 sprite horizontally by arbitrary pixel offsets requires shifting its 7-pixel byte windows to the right by 0 to 6 pixels. When a 7-pixel pattern shifts right, it overflows into a second screen byte, spanning a 14-pixel wide, 2-byte field.
 
-On a 1 MHz 6502, performing 14-bit runtime bit-shifts across 22 bytes per sprite at 60 Hz would consume excessive CPU cycles. Doug Smith solved this by performing **no runtime bit-shifting at all**. Instead, *Lode Runner* uses a pre-calculated two-stage dictionary lookup:
+On a 1 MHz 6502, performing 14-bit runtime bit-shifts across 22 bytes per sprite would consume excessive CPU cycles. Doug Smith solved this by performing **no runtime bit-shifting at all**. Instead, *Lode Runner* uses a pre-calculated two-stage dictionary lookup:
 
 $$\text{Input 7-Pixel Pattern } (Y) + \text{Shift Amount } (S) \longrightarrow \text{Ready-to-blit Two Screen Bytes } (B_0, B_1)$$
 
@@ -159,7 +159,7 @@ A naive lookup table mapping every 7-bit input ($2^7 = 128$) across 7 shift posi
 - **Width 6:** 16 shapes ($2^4$) $\times\ 8$ positions $= 128$
 - **Width 7:** 32 shapes ($2^5$) $\times\ 7$ positions $= 224$
 
-Summing these gives **511 unique non-zero shapes**. Adding the 1 all-zero pattern brings the grand total to **exactly 512 unique visual outcomes**. At 2 bytes per entry, `pixel_pattern_table.asm` requires exactly 1,024 bytes, filling four consecutive 256-byte 6502 pages (`$A900` to `$ACFF`) with zero padding.
+Summing these gives **511 unique non-zero shapes**. Adding the 1 all-zero pattern brings the grand total to **exactly 512 unique visual outcomes**. At 2 bytes per entry, `pixel_pattern_table.asm` requires exactly 1,024 bytes, filling four consecutive 256-byte 6502 pages (`$A900` to `$ACFF`) exactly.
 
 ### The Shift Table Split Architecture
 
@@ -169,11 +169,29 @@ Each shift amount ($0 \dots 6$) is given its own 256-byte page in memory (`$A200
 1. **Low Bytes (Offsets):** The first 128 bytes of the page (`$00 \dots $7F`), containing the target offset within `$A900`–`$ACFF`.
 2. **High Bytes (Pages):** The second 128 bytes of the page (`$80 \dots $FF`), containing the target page high byte (`$A9`, `$AA`, `$AB`, or `$AC`).
 
-The shift page base is looked up via `PIXEL_SHIFT_PAGES` (`$84C1`: `$A2, $A3, $A4, $A5, $A6, $A7, $A8`). The 6502 retrieves the 16-bit address with two single-cycle indexed loads:
+The shift page base is looked up via `PIXEL_SHIFT_PAGES` (`$84C1`: `$A2, $A3, $A4, $A5, $A6, $A7, $A8`). The 6502 then reads `Lo` and `Hi` with two absolute-indexed loads (`LDA abs,Y`, 4 cycles each).
+
+`COMPUTE_SHIFTED_SPRITE` does not use a pointer for this. It uses self-modifying code: once per sprite, it writes the shift page into the high byte of the address inside its own lookup instructions. For shift 3, `LDA $A000,Y` becomes `LDA $A500,Y`. Simplified from the routine (Chapter 3, section 3.3):
 ```assembly
-LDA (TMP_PTR), Y       ; TMP_PTR=$A200..$A800 -> reads target Offset (Lo)
-LDA (TMP_PTR+128), Y   ; TMP_PTR=$A280..$A880 -> reads target Page (Hi)
+        LDA PIXEL_SHIFT_PAGES,X     ; X = shift amount -> page $A2..$A8
+        STA .rd_offset_table+2      ; patch high byte of the address below
+        STA .rd_page_table+2        ; ... and of the second lookup
+        ...
+        TAY                         ; Y = 7-bit sprite byte (pattern)
+.rd_offset_table:
+        LDA $A000,Y                 ; runs as LDA $A200+..,Y -> Lo (offset)
+        ...                         ; patch Lo and Lo+1 into the two reads below
+.rd_page_table:
+        LDA $A080,Y                 ; runs as LDA $A280+..,Y -> Hi (page)
+        ...                         ; patch Hi into the two reads below
+.rd_shift_ptr_byte0:
+        LDA $A000                   ; runs as LDA $HiLo   -> output byte 0
+        STA BLOCK_DATA,X
+.rd_shift_ptr_byte1:
+        LDA $A000                   ; runs as LDA $HiLo+1 -> output byte 1
+        STA BLOCK_DATA+1,X
 ```
+Every offset in the table is even, so `Lo+1` never crosses into the next page. That is why the routine can compute it with a plain `ADC #$01` and no carry handling.
 
 #### Concrete Mapping Model (Shift 0 Example)
 
@@ -191,7 +209,7 @@ Viewing these split arrays as a unified 3-column map shows how the 7-bit key ind
 | `%00100010` (34) | `$84` (Index 34) | `$A9` (Index 162) | `$A984` |
 | `%00100011` (35) | `$12` (Index 35) | `$AA` (Index 163) | `$AA12` |
 
-Starting at input index 33, the High Byte alternates between `$A9` and `$AA` because the target shapes cross the physical 256-byte hardware page boundary in memory.
+Starting at input index 33, the High Byte alternates between `$A9` and `$AA` because the target shapes cross a 256-byte page boundary in memory.
 
 ### Pipeline: From Screen Pixels to Shifted Output
 
@@ -203,6 +221,8 @@ The entire lookup and conversion follows a strict 5-stage pipeline:
 4. **Pattern Table Resolution:** Target address `$HiLo` reads Output Byte 0, and `$HiLo + 1` reads Output Byte 1 from `$A900`–`$ACFF`.
 5. **Output Unpacking:** Bit 7 (NTSC color bit) is masked off each byte, and bits 0–6 are reversed back to visual screen pixel order, yielding the shifted 14-pixel field.
 
+Stages 1 and 5 exist only in the workbook, which shows pixels in screen order. The game itself works on the stored bytes directly: it takes the sprite byte as key $Y$ and writes the output bytes to `BLOCK_DATA` unchanged.
+
 ### Visual Mechanics Flow
 
 ```mermaid
@@ -212,28 +232,28 @@ flowchart TD
         S["Shift S (0..6)<br/>in Reg X"]
     end
 
-    subgraph Stage1 ["Stage 1: Hardware Page Dispatch"]
+    subgraph Stage1 ["Stage 1: Page Dispatch"]
         S -->|"LDA PIXEL_SHIFT_PAGES, X"| SP["Shift Page<br/>$A2 + S (e.g. $A5)"]
     end
 
     subgraph Stage2 ["Stage 2: Shift Table (256-byte page)"]
-        SP -->|"LDA (page, 00), Y"| LO["Offset Lo<br/>(from first 128B)"]
+        SP -->|"LDA $A500,Y (patched)"| LO["Offset Lo<br/>(from first 128B)"]
         Y --> LO
-        SP -->|"LDA (page, 80), Y"| HI["Target Page Hi<br/>(from second 128B)"]
+        SP -->|"LDA $A580,Y (patched)"| HI["Target Page Hi<br/>(from second 128B)"]
         Y --> HI
     end
 
     subgraph Stage3 ["Stage 3: Pattern Table Gallery ($A900-$ACFF)"]
         HI --> ADDR["Address: $PageLo<br/>e.g. $A95A"]
         LO --> ADDR
-        ADDR -->|"Read 2 Bytes"| B0["Byte 0 (e.g. $94)<br/>%10010100"]
-        ADDR -->|"Read +1 Byte"| B1["Byte 1 (e.g. $82)<br/>%10000010"]
+        ADDR -->|"Read 2 Bytes"| B0["Byte 0 (e.g. $B0)<br/>%10110000"]
+        ADDR -->|"Read +1 Byte"| B1["Byte 1 (e.g. $81)<br/>%10000001"]
     end
 
     subgraph Outputs ["Output 14-Pixel Screen Window"]
         B0 -->|"Strip bit 7, flip LSB"| OUT0["Pixels 0..6 (Byte 0)"]
         B1 -->|"Strip bit 7, flip LSB"| OUT1["Pixels 7..13 (Byte 1)"]
-        OUT0 --> SCREEN["Shifted 14 Pixels<br/>0000110 0100000"]
+        OUT0 --> SCREEN["Shifted 14 Pixels<br/>0000110 1000000"]
         OUT1 --> SCREEN
     end
 ```
@@ -242,7 +262,7 @@ flowchart TD
 
 - **Pixels vs. Storage Bits:** On the Apple II, pixels are drawn left-to-right on screen, but stored least-significant-bit first ($P_0 = \text{bit } 0, P_6 = \text{bit } 6$). For example, pixels `0110100` reverse to `%0010110` ($22$ decimal). Looking up patterns using screen pixel order rather than storage bit order will hit the wrong table entries.
 - **Pattern Table Returns Bytes, Not Pixels:** `pixel_pattern_table.asm` does not store pixel bitstrings. It holds raw screen bytes with bit 7 forced to $1$ (for high-bit NTSC orange/blue artifacting). To display or inspect them as pixels, bit 7 must be masked off and the remaining 7 bits reversed back to screen order.
-- **Hardware Page Bouncing:** The High Bytes in `pixel_shift_table.asm` bounce between `$A9`, `$AA`, `$AB`, and `$AC` because target addresses cross physical 256-byte boundaries in RAM as shift offsets grow. Storing page and offset in split arrays eliminates 16-bit pointer arithmetic during gameplay.
+- **Page Bouncing:** The High Bytes in `pixel_shift_table.asm` bounce between `$A9`, `$AA`, `$AB`, and `$AC` because target addresses cross physical 256-byte boundaries in RAM as shift offsets grow. Storing page and offset in split arrays eliminates 16-bit pointer arithmetic during gameplay.
 
 ---
 
@@ -310,7 +330,7 @@ Adjusting the shift cell $S$ from $0$ to $6$ allows immediate inspection of the 
 
 ## Architectural Analysis: The Indirection Mystery & Direct Table Optimization
 
-During the construction of the Phase 4 lab, a third evaluation block was implemented on `Pixel Shifter` using the reflowed sheet `Pixel Shift Pattern Table`. This surfaced an unexpected architectural finding regarding Doug Smith's table design.
+While building the `Sprite Shifter` sheet, a third evaluation block was implemented on `Pixel Shifter` using the reflowed sheet `Pixel Shift Pattern Table`. This surfaced an unexpected architectural finding regarding Doug Smith's table design.
 
 ### The As-Built 2-Stage Design
 
@@ -336,24 +356,37 @@ Because each shift amount page in memory is 256 bytes wide, the 6502 could store
 - First 128 bytes (`$00 \dots $7F`): Output Byte 0 ($B_0$)
 - Second 128 bytes (`$80 \dots $FF`): Output Byte 1 ($B_1$)
 
-The 6502 lookup routine would then become:
+The lookup in `COMPUTE_SHIFTED_SPRITE` would then shrink to two reads per sprite byte. The shift page is still patched into the instructions once per sprite, as today; the per-byte patching disappears:
 ```assembly
-LDA (TMP_PTR), Y       ; reads Output Byte 0 directly!
-...
-LDA (TMP_PTR+128), Y   ; reads Output Byte 1 directly!
+.rd_byte0:
+        LDA $A200,Y                 ; page patched to $A2+shift -> output byte 0
+        STA BLOCK_DATA,X
+.rd_byte1:
+        LDA $A280,Y                 ; same page, second 128 bytes -> output byte 1
+        STA BLOCK_DATA+1,X
 ```
 
 **Concrete Savings of the Direct Model:**
 1. **Memory:** Completely eliminates `PIXEL_PATTERN_TABLE`, saving **1,024 bytes of RAM** (over 1 KB on a 48 KB / 64 KB Apple II system).
-2. **Speed:** Eliminates an entire stage of indirect 16-bit address resolution in the hot inner loop of sprite rendering, saving multiple 6502 CPU cycles per row.
+2. **Speed:** Eliminates the per-byte instruction patching in the inner loop of sprite rendering. Counted with standard 6502 cycle timings:
+
+| | As built | Direct table |
+|---|---|---|
+| Lookup + write, first sprite byte | 44 | 16 |
+| Lookup + write, second sprite byte (with `ORA`) | 48 | 20 |
+| One row (whole loop body) | 162 | 106 |
+| Whole routine (setup + 11 rows) | about 1,824 | about 1,208 |
+
+That is 56 cycles per row, 616 cycles per call -- about a third of the routine. `COMPUTE_SHIFTED_SPRITE` runs every time a sprite is drawn or erased.
 
 ### Why Did Doug Opt for Indirection?
 
-If a direct 1,792-byte table is smaller and faster, why did the disassembly use the two-stage dictionary indirection? Three historical and engineering hypotheses emerge:
+If a direct 1,792-byte table is smaller and faster, why did the disassembly use the two-stage dictionary indirection? Two hypotheses:
 
 1. **Evolutionary / Generative Pipeline:** Doug Smith generated the 512 unique visual pattern gallery first as a mathematical proof of hi-res pattern compression. When building the shift engine, his external table generator was written to emit indices pointing into that gallery rather than flattening the final pairs into the shift pages.
-2. **Planned Collision or Masking Reuse:** In early design iterations, having a unique index (0..511) for every visual shape on screen was likely intended for fast collision detection, bounding-box checks, or background tile masking. If that feature was later refactored out or simplified, the underlying dictionary structure remained.
-3. **The "Compression Intuition" Trap:** It is easy to assume that reducing 896 possibilities to 512 unique entries saves space. However, because the pointers themselves require 2 bytes per entry (16 bits), the pointer table consumes $896 \times 2 = 1{,}792$ bytes. Storing pointers into a 1,024-byte dictionary costs $1{,}792 + 1{,}024 = 2{,}816$ bytes, whereas storing the uncompressed target bytes directly costs only $1{,}792$ bytes.
+2. **The "Compression Intuition" Trap:** It is easy to assume that reducing 896 possibilities to 512 unique entries saves space. However, because the pointers themselves require 2 bytes per entry (16 bits), the pointer table consumes $896 \times 2 = 1{,}792$ bytes. Storing pointers into a 1,024-byte dictionary costs $1{,}792 + 1{,}024 = 2{,}816$ bytes, whereas storing the uncompressed target bytes directly costs only $1{,}792$ bytes.
+
+The equivalence was checked for every case: all 896 pattern/shift combinations, followed through `pixel_shift_table.asm` into `pixel_pattern_table.asm`, give exactly the shifted bytes, and all 512 pattern entries are used. `PIXEL_PATTERN_TABLE` is reached only through the shift table; the chapter's cross-reference lists no other code that uses it.
 
 This lab proves that the entire 2-stage dictionary can be collapsed into a single, direct 1,792-byte table without losing a single bit of functionality.
 
@@ -385,7 +418,7 @@ This lab proves that the entire 2-stage dictionary can be collapsed into a singl
 
 **`load-runner`** (not yet public): `a2-hires-lab` draws its sprite data and Chapter 3 documentation from the disassembly project but is intentionally standalone -- no shared code, no shared repo. The relationship is one-directional: the disassembly is a data/documentation source, not a dependency. Architectural findings from this lab (such as the 1,792-byte direct lookup optimization) feed back into the `load-runner` literate documentation.
 
-**[`papple2`](https://github.com/fschuhi/papple2):** the VBA color rules, once fully verified against the chapter's worked examples, are meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model without the neighbor-adjacency rules this project has been working out by hand. That handoff hasn't happened yet -- it's the natural next bridge once Deliverable 1 is fully hardened (see `TODO.md`'s `papple2` integration section).
+**[`papple2`](https://github.com/fschuhi/papple2):** the VBA color rules, once fully verified against the chapter's worked examples, are meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model without the neighbor-adjacency rules this project has been working out by hand. That handoff hasn't happened yet -- it's the natural next bridge once the Sprite Editor/Viewer is fully hardened (see `TODO.md`'s `papple2` integration section).
 
 ---
 
