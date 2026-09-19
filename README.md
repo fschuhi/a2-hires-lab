@@ -404,4 +404,13 @@ There's no automated test suite yet. Correctness is checked by hand against Chap
 - **`Hex0`/`Hex1` include the high bit; the chapter's printed byte values don't.** Not a bug -- see Settled decisions -- but easy to trip over when comparing against the PDF directly.
 - **Reading VBA back out of a `.xlsm` via `oletools`/`olevba` only works against a file that's genuinely been through Excel.** Confirmed reliable, byte-for-byte, against a real Excel-saved file. A file with freshly-authored-but-never-opened-in-Excel Basic code (tried via LibreOffice UNO scripting) does not contain a real `vbaProject.bin` and yields nothing -- this is a limitation of authoring VBA outside Excel, not of the reading tool.
 - **`BITAND`-based masking formulas make Excel silently add a hidden compatibility defined name** (e.g. `_xleta.AND`). Harmless, Excel-managed -- don't try to keep it in sync with anything by hand.
-®
+
+---
+
+## License and Attribution
+
+This project incorporates disassembly data, tables, and documentation derived from [XekriRedmane/lode_runner_reveng](https://github.com/XekriRedmane/lode_runner_reveng).
+
+The original work is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
+
+In accordance with the ShareAlike terms, this repository is also licensed under the [CC BY-SA 4.0 License](LICENSE.md).
