@@ -38,6 +38,7 @@
 - [Running](#running)
   - [How correctness is currently verified](#how-correctness-is-currently-verified)
 - [Technical notes & gotchas](#technical-notes--gotchas)
+- [License and Attribution](#license-and-attribution)
 
 ---
 
