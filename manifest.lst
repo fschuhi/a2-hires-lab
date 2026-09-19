@@ -42,9 +42,6 @@ src/bas/Util.bas
 ### --- DevOps tools ---
 #tools/concat_files.py
 
-### --- Python source ---
-src/papple2/Apple.py
-
 ### --- Tests ---
 # TBA
 

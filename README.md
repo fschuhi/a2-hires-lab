@@ -4,55 +4,74 @@
 
 ---
 
-![Description of image](img/sprite_editor_viewer.jpg)
+![Sprite Editor / Viewer](img/sprite_editor_viewer.jpg)
 
-## Table of Contents
+## What this is
 
-- [Vision](#vision)
-- [Architecture](#architecture)
-  - [The two-button, idempotent contract](#the-two-button-idempotent-contract)
-- [The colour model](#the-colour-model)
-  - [NTSC Colors](#ntsc-colors)
-  - [Implementation](#implementation)
-- [Sprite Table Memory Layout](#sprite-table-memory-layout)
-- [The Shift Engine (Phase 3)](#the-shift-engine-phase-3)
-  - [The Core Problem: Runtime Shifting vs. Table Lookups](#the-core-problem-runtime-shifting-vs-table-lookups)
-  - [Why Exactly 512 Unique Patterns?](#why-exactly-512-unique-patterns)
-  - [The Shift Table Split Architecture](#the-shift-table-split-architecture)
-    - [Concrete Mapping Model (Shift 0 Example)](#concrete-mapping-model-shift-0-example)
-  - [Pipeline: From Screen Pixels to Shifted Output](#pipeline-from-screen-pixels-to-shifted-output)
-  - [Visual Mechanics Flow](#visual-mechanics-flow)
-  - [Educational Takeaways & Traps](#educational-takeaways--traps)
-- [The Sprite Shifter Engine (Phase 4)](#the-sprite-shifter-engine-phase-4)
-  - [From Sprite Rows to BLOCK_DATA](#from-sprite-rows-to-block_data)
-  - [The Middle-Byte Merge Contract](#the-middle-byte-merge-contract)
-  - [Screen Bitfield Reflection](#screen-bitfield-reflection)
-- [Architectural Analysis: The Indirection Mystery & Direct Table Optimization](#architectural-analysis-the-indirection-mystery--direct-table-optimization)
-  - [The As-Built 2-Stage Design](#the-as-built-2-stage-design)
-  - [The Direct 1-Stage Alternative](#the-direct-1-stage-alternative)
-  - [Why Did Doug Opt for Indirection?](#why-did-doug-opt-for-indirection)
-- [Current status](#current-status)
-- [Settled decisions](#settled-decisions)
-- [Relation to sibling projects](#relation-to-sibling-projects)
-- [Prior art](#prior-art)
-- [Running](#running)
-  - [How correctness is currently verified](#how-correctness-is-currently-verified)
-- [Technical notes & gotchas](#technical-notes--gotchas)
-- [License and Attribution](#license-and-attribution)
+Not a general-purpose bitmap editor -- a lab. Each sheet illuminates one layer of the graphics machinery the disassembly documents: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen. The workbook is standalone from my `load-runner` disassembly project (not yet public; misspelling intentional; no shared code, no shared repo) and draws its data and documentation directly from Chapter 3 of `main.nw` from XekriRedmane's fantastic project https://github.com/XekriRedmane/lode_runner_reveng.
+
+One surprise along the way: the game's two-stage shift lookup uses 2,816 bytes of tables, but the same result fits in a single 1,792-byte table -- which would also make the lookup faster -- see [Architectural Analysis](#architectural-analysis-the-indirection-mystery--direct-table-optimization).
 
 ---
 
-## Vision
+## What's in the workbook
 
-Not a general-purpose bitmap editor -- a lab. Each sheet illuminates one layer of the graphics machinery the disassembly documents: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen. The workbook is standalone from my `load-runner` disassembly project (misspelling intentional; no shared code, no shared repo) and draws its data and documentation directly from Chapter 3 of `main.nw` from XekriRemane's fantastic project https://github.com/XekriRedmane/lode_runner_reveng.
+| Sheet | What you can do there |
+|---|---|
+| `Sprite (load)` | Pick any of the 104 game sprites by number, then see and edit its pixels, bytes, bits and NTSC colors |
+| `Sprite (S)` | A sprite from the diagrams in the disassembly's documentation, reproduced pixel for pixel |
+| `Sprite (Player)` | The player sprite from the same diagrams, reproduced pixel for pixel |
+| `Sprite (Player HB0)` | The player sprite with the high bit cleared. Lode Runner never does this; the sheet checks that the NTSC rules also hold for the green/violet pair |
+| `Sprite (HB0<>HB1)` | What happens at the byte boundary when the two bytes use different color pairs |
+| `Pixel Shifter` | Enter 7 pixels and a shift amount, and follow the two-stage table lookup step by step, in three equivalent versions |
+| `Pixel Shift Table` | All 128 patterns x 7 shifts on one sheet, each resolved to its target address |
+| `Pixel Shift Pattern Table` | The shift tables rewritten as one direct 1,792-byte table |
+| `Sprite Shifter` | Shift a whole sprite by 0-6 pixels and watch it spread into a third byte |
+| Data sheets | The original tables from the disassembly, parsed into cells: `sprite_data.asm`, `SPRITE_DATA`, `Sprite Loader`, `pixel_shift_table.asm`, `pixel_pattern_table.asm`, `Pixel Shift Pages` |
 
-**Core philosophy:**
+Planned: a Memory Map Viewer for the HGR pages.
+
+## Design choices
 
 - **Sprite-focused, not screen-fragment-focused.** Prior art in this space (see below) treats hi-res as an undifferentiated pixel field. `a2-hires-lab` is built around the game's own unit of meaning -- the 11x14 sprite -- with an inventory, shift mechanics, and memory-map views all keyed to that.
 - **Pixels are canonical, bytes are derived.** The editor's primary input is the pixel grid; "Update Viewer" computes bytes from pixels, not the other way around. This was a deliberate correction mid-design: the human-meaningful direction is pixels first.
 - **VBA over conditional formatting.** Color rendering runs through named, readable, testable functions (`NTSCColor.PixelColor`, `.ColoredPixel`) rather than being buried in per-cell formulas. The logic needs to be inspectable and eventually portable to `papple2` -- a pile of conditional-formatting rules can't be either.
-- **A ground-truth for `papple2`.** The NTSC color rules, once verified by hand against the chapter's own worked figures, are meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel model with no neighbor adjacency.
-- **Each deliverable stands alone but composes.** The Sprite Editor/Viewer is the foundation; Inventory, Pixel Shifter, Sprite Shifter, and Memory Map Viewer each add a sheet and VBA module without requiring the earlier ones to change shape.
+
+---
+
+## Running
+
+**Excel version.** The workbook needs Excel for Microsoft 365 or Excel 2024, on Windows or Mac. Several sheets use `TOROW`, and `SPRITE_DATA` uses `LET`; older versions show `#NAME?` in those cells. On `Pixel Shifter`, the second of the three blocks ("2D range") does the same lookup without `TOROW`. Excel for the web can open the file but cannot run macros. LibreOffice has not been tested. The workbench was built for my own exploration, so I have not tried to support older versions. Developed and tested with Excel for Microsoft 365 on Windows 11.
+
+**Macros.** `a2-hires-lab.xlsm` contains VBA macros, and parts of the workbook depend on them: the buttons on the sprite sheets, and custom functions such as `ReverseString` and `HexToBits` that worksheet formulas call. Without macros, those cells show `#NAME?`. Windows Excel blocks macros in files downloaded from the internet. Before opening the file, right-click it in Explorer, choose Properties, and tick "Unblock" on the General tab. On Mac, Excel asks whether to enable macros when the file opens. All VBA source is also in `src/bas/` as plain text, so you can read it before enabling anything.
+
+```bash
+make setup        # create venv, install dependencies (papple2-side, not yet used by the workbook)
+make filesdump     # regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
+```
+
+The workbook itself has no build step yet: open `a2-hires-lab.xlsm` directly in Excel. `Update Viewer` and `Load from Bytes` are Form Control buttons on the `Sprite Editor-Viewer` sheet, wired to `SpriteEditor.UpdateViewer` / `SpriteEditor.LoadFromBytes`.
+
+### How correctness is currently verified
+
+There's no automated test suite yet. Correctness is checked by hand against Chapter 3 page 8's two worked sprite examples: type the pixel data into the editor (`HB0`/`HB1` default to 1), click `Update Viewer`, and compare the color viewer against the chapter's own rendered figure, pixel for pixel. The first ("5"-shaped, `byte1` always `0x00`) sprite is confirmed correct; the second (mixed-`byte1`) sprite and the `HB0 != HB1` byte-boundary case are still open. Once fixtures are derived for `papple2`, this becomes an automated `pytest` suite on that side instead.
+
+---
+
+## Contents
+
+- [Architecture](#architecture)
+- [The colour model](#the-colour-model)
+- [Sprite Table Memory Layout](#sprite-table-memory-layout)
+- [The Shift Engine](#the-shift-engine)
+- [The Sprite Shifter Engine](#the-sprite-shifter-engine)
+- [Architectural Analysis: The Indirection Mystery & Direct Table Optimization](#architectural-analysis-the-indirection-mystery--direct-table-optimization)
+- [How the workbook is built](#how-the-workbook-is-built)
+- [Settled decisions](#settled-decisions)
+- [Relation to sibling projects](#relation-to-sibling-projects)
+- [Prior art](#prior-art)
+- [Technical notes & gotchas](#technical-notes--gotchas)
+- [License and Attribution](#license-and-attribution)
 
 ---
 
@@ -116,7 +135,7 @@ This is a deliberate trade for the 6502, which has no multiply instruction. Stor
 
 ---
 
-## The Shift Engine (Phase 3)
+## The Shift Engine
 
 ### The Core Problem: Runtime Shifting vs. Table Lookups
 
@@ -227,7 +246,7 @@ flowchart TD
 
 ---
 
-## The Sprite Shifter Engine (Phase 4)
+## The Sprite Shifter Engine
 
 ### From Sprite Rows to BLOCK_DATA
 
@@ -340,15 +359,7 @@ This lab proves that the entire 2-stage dictionary can be collapsed into a singl
 
 ---
 
-## Current status
-
-| # | Sheet | Status | Description |
-|---|-------|--------|-------------|
-| 1 | Sprite Editor/Viewer | complete | Layout, `Util`, `NTSCColor`, `SpriteEditor` all built; verified pixel-for-pixel |
-| 2 | Sprite Inventory | complete | Core machinery (`SPRITE_DATA` reflow table, address table, load macro) built; dropdown UI postponed |
-| 3 | Pixel Shifter | complete | Reorganized 7-shift unified map and direct 2-stage dictionary lookup (`PixelShiftPages` -> `pixel_shift_table.asm` -> `pixel_pattern_table.asm`) |
-| 4 | Sprite Shifter | complete | Full 11-row `COMPUTE_SHIFTED_SPRITE` engine, middle-byte `BITOR` merge, 21-column screen bitfield, and direct lookup analysis |
-| 5 | Memory Map Viewer | idea | Two sheets showing HGR1/HGR2 pixel/color state |
+## How the workbook is built
 
 **Build mechanic:** the sheet layout is generated (`openpyxl`) and the VBA modules are authored as plain-text `.bas` files, imported into Excel by hand rather than fabricated as a binary `.xlsm` -- see Technical notes below for why. Confirmed working round-trip: a real Excel-saved `.xlsm`'s VBA source can be read back losslessly via `oletools`/`olevba`, which is how future sessions read the modules directly from `a2-hires-lab.xlsm` instead of needing separate `.bas` copies in the filesdump.
 
@@ -372,30 +383,15 @@ This lab proves that the entire 2-stage dictionary can be collapsed into a singl
 
 ## Relation to sibling projects
 
-**`load-runner`:** `a2-hires-lab` draws its sprite data and Chapter 3 documentation from the disassembly project but is intentionally standalone -- no shared code, no shared repo. The relationship is one-directional: the disassembly is a data/documentation source, not a dependency. Architectural findings from this lab (such as the 1,792-byte direct lookup optimization) feed back into the `load-runner` literate documentation.
+**`load-runner`** (not yet public): `a2-hires-lab` draws its sprite data and Chapter 3 documentation from the disassembly project but is intentionally standalone -- no shared code, no shared repo. The relationship is one-directional: the disassembly is a data/documentation source, not a dependency. Architectural findings from this lab (such as the 1,792-byte direct lookup optimization) feed back into the `load-runner` literate documentation.
 
-**`papple2`:** the VBA color rules, once fully verified against the chapter's worked examples, are meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model without the neighbor-adjacency rules this project has been working out by hand. That handoff hasn't happened yet -- it's the natural next bridge once Deliverable 1 is fully hardened (see `TODO.md`'s `papple2` integration section).
+**[`papple2`](https://github.com/fschuhi/papple2):** the VBA color rules, once fully verified against the chapter's worked examples, are meant to become test fixtures for `papple2`'s `Display.update_hires`, which currently uses a simplified per-pixel color model without the neighbor-adjacency rules this project has been working out by hand. That handoff hasn't happened yet -- it's the natural next bridge once Deliverable 1 is fully hardened (see `TODO.md`'s `papple2` integration section).
 
 ---
 
 ## Prior art
 
 François Vander Linden's **`bitmap_creator`** (Excel, formula-driven, no VBA) validates that "Excel + colored cells" works for hi-res visualization, and its documented color rules confirm our NTSC decision table independently. It's not a basis for this project: it's a general 70x192-pixel screen-fragment editor with no notion of sprites, no game-data awareness, and its color logic lives in conditional-formatting formulas rather than readable code.
-
----
-
-## Running
-
-```bash
-make setup        # create venv, install dependencies (papple2-side, not yet used by the workbook)
-make filesdump     # regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
-```
-
-The workbook itself has no build step yet: open `a2-hires-lab.xlsm` directly in Excel. `Update Viewer` and `Load from Bytes` are Form Control buttons on the `Sprite Editor-Viewer` sheet, wired to `SpriteEditor.UpdateViewer` / `SpriteEditor.LoadFromBytes`.
-
-### How correctness is currently verified
-
-There's no automated test suite yet. Correctness is checked by hand against Chapter 3 page 8's two worked sprite examples: type the pixel data into the editor (`HB0`/`HB1` default to 1), click `Update Viewer`, and compare the color viewer against the chapter's own rendered figure, pixel for pixel. The first ("5"-shaped, `byte1` always `0x00`) sprite is confirmed correct; the second (mixed-`byte1`) sprite and the `HB0 != HB1` byte-boundary case are still open. Once fixtures are derived for `papple2`, this becomes an automated `pytest` suite on that side instead.
 
 ---
 
