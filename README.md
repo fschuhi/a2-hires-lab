@@ -188,29 +188,33 @@ The entire lookup and conversion follows a strict 5-stage pipeline:
 ```mermaid
 flowchart TD
     subgraph Inputs ["Input 7-Pixel Window"]
-        PX["Screen Pixels: P0..P6<br/>e.g. 0110100"] -->|LSB-first flip| Y["Key Y (0..127)<br/>%0010110 ($16)"]
+        PX["Screen Pixels: P0..P6<br/>e.g. 0110100"] -->|"LSB-first flip"| Y["Key Y (0..127)<br/>%0010110 ($16)"]
         S["Shift S (0..6)<br/>in Reg X"]
     end
 
     subgraph Stage1 ["Stage 1: Hardware Page Dispatch"]
-        S -->|LDA PIXEL_SHIFT_PAGES, X| SP["Shift Page<br/>$A2 + S (e.g. $A5)"]
+        S -->|"LDA PIXEL_SHIFT_PAGES, X"| SP["Shift Page<br/>$A2 + S (e.g. $A5)"]
     end
 
     subgraph Stage2 ["Stage 2: Shift Table (256-byte page)"]
-        SP & Y -->|LDA (page, 00), Y| LO["Offset Lo<br/>(from first 128B)"]
-        SP & Y -->|LDA (page, 80), Y| HI["Target Page Hi<br/>(from second 128B)"]
+        SP -->|"LDA (page, 00), Y"| LO["Offset Lo<br/>(from first 128B)"]
+        Y --> LO
+        SP -->|"LDA (page, 80), Y"| HI["Target Page Hi<br/>(from second 128B)"]
+        Y --> HI
     end
 
     subgraph Stage3 ["Stage 3: Pattern Table Gallery ($A900-$ACFF)"]
-        HI & LO -->|16-bit Target Address| ADDR["Address: $PageLo<br/>e.g. $A95A"]
-        ADDR -->|Read 2 Bytes| B0["Byte 0 (e.g. $94)<br/>%10010100"]
-        ADDR -->|Read +1 Byte| B1["Byte 1 (e.g. $82)<br/>%10000010"]
+        HI --> ADDR["Address: $PageLo<br/>e.g. $A95A"]
+        LO --> ADDR
+        ADDR -->|"Read 2 Bytes"| B0["Byte 0 (e.g. $94)<br/>%10010100"]
+        ADDR -->|"Read +1 Byte"| B1["Byte 1 (e.g. $82)<br/>%10000010"]
     end
 
     subgraph Outputs ["Output 14-Pixel Screen Window"]
-        B0 -->|Strip bit 7, flip LSB| OUT0["Pixels 0..6 (Byte 0)"]
-        B1 -->|Strip bit 7, flip LSB| OUT1["Pixels 7..13 (Byte 1)"]
-        OUT0 & OUT1 --> SCREEN["Shifted 14 Pixels<br/>0000110 0100000"]
+        B0 -->|"Strip bit 7, flip LSB"| OUT0["Pixels 0..6 (Byte 0)"]
+        B1 -->|"Strip bit 7, flip LSB"| OUT1["Pixels 7..13 (Byte 1)"]
+        OUT0 --> SCREEN["Shifted 14 Pixels<br/>0000110 0100000"]
+        OUT1 --> SCREEN
     end
 ```
 
