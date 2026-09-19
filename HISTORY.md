@@ -9,6 +9,14 @@
 
 ---
 
+## 2026-09-19 -- Phase 4: Sprite Shifter & direct lookup model
+
+- Built the complete horizontal sprite shifting engine on `Sprite Shifter`, linking directly to the raw 7-bit keys on `'Sprite (load)'` and reproducing the 11-row `COMPUTE_SHIFTED_SPRITE` pipeline.
+- Implemented the two-stage dictionary lookups via 2D matrix arithmetic (`INT(...) + 1`, `MOD(...) + 1` across 16-byte boundaries) directly into `pixel_shift_table.asm` and `pixel_pattern_table.asm`, preserving full formula auditability.
+- Modeled the 33-byte `BLOCK_DATA` staging area (11 rows × 3 bytes), implementing the exact middle-byte bitwise merge via `=BITOR(...)` to combine shifted Byte 0 overflow with shifted Byte 1 head while naturally preserving the high-bit color flag.
+- Built the 21-column screen bitfield (`AA6:AY16`) with stripped high bits and LSB-first pixel reflection, visually confirming smooth horizontal sprite movement across screen byte boundaries for all shifts 0..6.
+- Added the "rewritten in place" direct shift lookup model on `Pixel Shifter` via `Pixel Shift Pattern Table`, demonstrating that consolidating the two split tables into a single 1,792-byte direct lookup eliminates indirection and would save 1,024 bytes and 6502 cycles in the original game engine.®
+
 ## 2026-09-18 -- Phase 3: Pixel shifter
 
 - Added the unified 7-shift mapping sheet `Pixel Shift Table`, laying out all 128 input patterns (keys 0..127) across 7 side-by-side shift blocks. Structured coordinates in rows 2 and 3 enabled a single universal formula across all 1,792 data cells, linking directly to the raw byte grid on `pixel_shift_table.asm`.

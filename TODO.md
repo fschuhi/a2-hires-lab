@@ -16,10 +16,16 @@
 
 - Sprite Editor enhancements: `Worksheet_Change` hook to replace the button-click workflow with live updates on edit -- still open, being handled directly in VBA.
 - Sprite Inventory enhancements (Phase 2): sprite picker/dropdown UI postponed; typed sprite number (`Sprite Loader!C4`) remains the interface for now.
+- Sprite Shifter visual painter (Phase 4): add a lightweight VBA macro button to paint the 21-cell row background colors underneath the screen bitfield using `NTSCColor.RowColors`.
 - _Needs investigation, low priority:_ two bytes in `sprite_data.asm` (sprites 102/103, row 10 byte 2) have their high bit set in storage, unlike every other byte in the table -- colored on `SPRITE_DATA` 2026-09-17. Possibly a disassembly-reconstruction artifact rather than deliberate game data; revisit if it ever matters for round-trip export.
-- ~~Pixel Shifter sheet (Phase 3) -- import `pixel_shift_table.asm` and `pixel_pattern_table.asm` onto data sheet~~ -- done 2026-09-18: built unified 7-shift `Pixel Shift Table` with universal formula linking 1,792 entries; implemented full 2-stage dictionary engine (`Pixel Shift Pages` -> `pixel_shift_table.asm` -> `pixel_pattern_table.asm`) on `Pixel Shifter` with both `TOROW` and Ariexcel-friendly 2D matrix formulas; verified across shifts 0..6; architecture added to `README.md`.
-- Sprite Shifter sheet (Phase 4) -- decide on 21-column viewer mode vs. crop-to-14. Apply shift mechanics across all 22 sprite bytes to reproduce `COMPUTE_SHIFTED_SPRITE` and show the middle-byte OR step.
+- ~~Sprite Shifter sheet (Phase 4) -- decide on 21-column viewer mode vs. crop-to-14. Apply shift mechanics across all 22 sprite bytes to reproduce `COMPUTE_SHIFTED_SPRITE` and show the middle-byte OR step.~~ -- done 2026-09-19: built live formula engine on `Sprite Shifter` linking directly to `'Sprite (load)'` and 2D matrix lookups into `pixel_shift_table.asm` and `pixel_pattern_table.asm`; implemented middle-byte `BITOR` merge and 21-column screen bitfield across all 11 rows.
 - Save sprite: export editor content back to `sprite_data.asm` interleaved format, enabling round-trip editing.
+
+## Immediate Next Steps (Prior to Phase 5)
+
+- Workbench polishing: clean up formatting, range labels, and sheet navigation across `Sprite Shifter` and `Pixel Shifter`.
+- Shift lookup analysis & documentation: document why the two-stage dictionary (`PIXEL_SHIFT_TABLE` -> `PIXEL_PATTERN_TABLE`) could be consolidated into a single direct 1,792-byte lookup table without indirection, saving 1,024 bytes and 6502 cycles. Add architecture section to `README.md`.
+- Literate-source sync: integrate findings, mapping tables, and Mermaid visual mechanics into the working Lode Runner literate source in `load-runner`.
 
 ## `papple2` integration
 
