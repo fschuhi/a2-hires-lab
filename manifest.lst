@@ -14,11 +14,14 @@ tmp/project_tree.txt
 a2-hires-lab-design.md
 
 # standard project documentation (probably slightly out of sync)
-#LICENSE.md
 README.md
 GOALS.md
 TODO.md
 HISTORY.md
+
+# licensing, see also `READMD.md`
+#LICENSE.md
+#LICENSE-CC-BY-SA-4.0.md
 
 ### --- Build & Python Configuration ---
 Makefile

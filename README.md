@@ -46,8 +46,9 @@ Planned: a Memory Map Viewer for the HGR pages.
 **Macros.** `a2-hires-lab.xlsm` contains VBA macros, and parts of the workbook depend on them: the buttons on the sprite sheets, and custom functions such as `ReverseString` and `HexToBits` that worksheet formulas call. Without macros, those cells show `#NAME?`. Windows Excel blocks macros in files downloaded from the internet. Before opening the file, right-click it in Explorer, choose Properties, and tick "Unblock" on the General tab. On Mac, Excel asks whether to enable macros when the file opens. All VBA source is also in `src/bas/` as plain text, so you can read it before enabling anything. The sources include not only functionality specific to `a2-hires-lab`, but also a general-purpose Excel toolkit, MIT-licensed.
 
 ```bash
-make setup        # create venv, install dependencies (papple2-side, not yet used by the workbook)
-make filesdump     # regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
+make setup         # create venv, install dependencies
+make export-vba    # write the workbook's VBA modules into src/bas/ as plain text
+make filesdump     # export VBA, then regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
 ```
 
 The workbook itself has no build step yet: open `a2-hires-lab.xlsm` directly in Excel. `Update Viewer` and `Load from Bytes` are Form Control buttons on each sprite sheet (e.g. `Sprite (load)`), wired to `Buttons.Button_UpdateViewer` / `Buttons.Button_LoadFromBytes`, which call `SpriteEditor.UpdateViewer` / `SpriteEditor.LoadFromBytes` for the active sheet.
@@ -66,7 +67,6 @@ There's no automated test suite yet. Correctness is checked by hand against Chap
 - [The Shift Engine](#the-shift-engine)
 - [The Sprite Shifter Engine](#the-sprite-shifter-engine)
 - [Architectural Analysis: The Indirection Mystery & Direct Table Optimization](#architectural-analysis-the-indirection-mystery--direct-table-optimization)
-- [How the workbook is built](#how-the-workbook-is-built)
 - [Settled decisions](#settled-decisions)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Prior art](#prior-art)
@@ -243,10 +243,10 @@ flowchart TD
     end
 
     subgraph Stage3 ["Stage 3: Pattern Table Gallery ($A900-$ACFF)"]
-        HI --> ADDR["Address: $PageLo<br/>e.g. $A95A"]
+        HI --> ADDR["Address: $HiLo<br/>e.g. $A95A"]
         LO --> ADDR
-        ADDR -->|"Read 2 Bytes"| B0["Byte 0 (e.g. $B0)<br/>%10110000"]
-        ADDR -->|"Read +1 Byte"| B1["Byte 1 (e.g. $81)<br/>%10000001"]
+        ADDR -->|"Read byte"| B0["Byte 0 (e.g. $B0)<br/>%10110000"]
+        ADDR -->|"Read +1 byte"| B1["Byte 1 (e.g. $81)<br/>%10000001"]
     end
 
     subgraph Outputs ["Output 14-Pixel Screen Window"]
@@ -423,8 +423,12 @@ François Vander Linden's **`bitmap_creator`** (Excel, formula-driven, no VBA) v
 
 ## License and Attribution
 
-This project incorporates disassembly data, tables, and documentation derived from [XekriRedmane/lode_runner_reveng](https://github.com/XekriRedmane/lode_runner_reveng).
+This repository contains material under two licenses.
 
-The original work is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
+**Code: MIT.** The VBA modules (in `a2-hires-lab.xlsm` and `src/bas/`), the workbook's formulas and sheet design, and the Python tools in `tools/` are my own work, licensed under the [MIT License](LICENSE).
 
-In accordance with the ShareAlike terms, this repository is also licensed under the [CC BY-SA 4.0 License](LICENSE.md).
+**Documentation and game data: CC BY-SA 4.0.** The disassembly data, tables and chapter documentation come from [XekriRedmane/lode_runner_reveng](https://github.com/XekriRedmane/lode_runner_reveng), licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). This covers the files in `data/lode_runner_reveng/` and their data wherever it appears in the workbook; the formulas and code that process it remain MIT. This `README.md` and the other documentation quote and build on that material, so they are licensed under [CC BY-SA 4.0](LICENSE-CC-BY-SA-4.0.md) as well.
+
+The technical ideas themselves (how the shift tables work, the direct 1,792-byte table, the cycle counts) are free for anyone to use. If you build on them, a link back to this repository is appreciated.
+
+The sprite data and tables were originally part of Lode Runner (Broderbund, 1983). Rights in the original game remain with their holders.

@@ -33,7 +33,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose clean showtree gentree filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose export-vba clean showtree gentree filesdump filesdump-detailed help
 
 all: setup
 
@@ -62,7 +62,8 @@ test-verbose: $(SETUP_STAMP) ## Run tests with verbose output
 
 # --- Tools ---
 
-# TBA
+export-vba: $(SETUP_STAMP) ## Export the workbook's VBA modules into src/bas/ (one-way)
+	$(RUN) tools/export_vba.py
 
 # --- Utilities ---
 
@@ -79,12 +80,12 @@ gentree: ## Save tree to tmp/project_tree.txt (needs `tree`; mac-side)
 	@tree -I ".venv|.venv-win|__pycache__|tmp|*.egg-info|.git|*.jpg|*_rejected.*" > tmp/project_tree.txt
 	@echo "Project tree saved to tmp/project_tree.txt"
 
-filesdump: gentree ## Create context dump for LLMs
+filesdump: gentree export-vba ## Create context dump for LLMs
 	@echo "--- Generating filesdump ---"
 	$(RUN) tools/concat_files.py manifest.lst > tmp/filesdump.txt
 	@echo "Filesdump created at tmp/filesdump.txt"
 
-filesdump-detailed: gentree ## Create context dump for LLMs with per-file size details
+filesdump-detailed: gentree export-vba ## Create context dump for LLMs with per-file size details
 	@echo "--- Generating filesdump ---"
 	$(RUN) tools/concat_files.py --detailed --sort manifest.lst > tmp/filesdump.txt
 	@echo "Filesdump created at tmp/filesdump.txt"
