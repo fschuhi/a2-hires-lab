@@ -30,11 +30,26 @@ requirements-win.txt
 
 ### --- Excel workbench ---
 #a2-hires-lab.xlsm
+
 src/bas/Buttons.bas
+src/bas/Macros.bas
 src/bas/NTSCColor.bas
 src/bas/PixelShifter.bas
 src/bas/SpriteEditor.bas
 src/bas/Util.bas
+
+# standard libraries
+#src/bas/B_.bas
+#src/bas/JumpStation_.bas
+#src/bas/UserFormComment.frm
+#src/bas/UserFormSelector.frm
+#src/bas/UserFormComment.frm
+#src/bas/UserFormSelector.frm
+#src/bas/WorksheetsMatrix_.bas
+
+# *.frx, never put them into the `filesdump.txt`
+#src/bas/UserFormComment.frx
+#src/bas/UserFormSelector.frx
 
 ### --- Screenshots and other images ---
 #img/sprite_editor_viewer.jpg

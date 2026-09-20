@@ -38,3 +38,8 @@ Makefile        text eol=lf
 # Add here if a committed Windows launcher ever needs CRLF, e.g.:
 # scripts/win/*.bat   text eol=crlf
 # scripts/win/*.ini   text eol=crlf
+
+# --- VBA exports: keep byte-for-byte as the VBE writes them (CRLF, Windows-1252) ---
+*.bas           -text
+*.cls           -text
+*.frm           -text
