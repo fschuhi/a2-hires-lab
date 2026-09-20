@@ -23,17 +23,7 @@ Attribute VB_Name = "B_"
 ' ODER SONSTIGE ANSPRÜCHE HAFTBAR ZU MACHEN, OB INFOLGE DER ERFÜLLUNG EINES VERTRAGES, EINES DELIKTES ODER ANDERS IM ZUSAMMENHANG MIT DER SOFTWARE ODER
 ' SONSTIGER VERWENDUNG DER SOFTWARE ENTSTANDEN.
 
-' 05.01.25 fix ShowStatus multiple DoEvens fix
-' 06.02.25 added ReplaceSpaces, bitmaps for Powerpoint
-' 17.02.25 FMonth
-' 15.03.25 Excel SlideText helpers
-' 16.03.25 SimulateSlideText, SafeAdd, moved JumpStation mechanics to here, FPctP
-' 29.03.25 ColorSelection
-' 21.05.26 QuickSortStrings
-' 01.06.26 fixed multiple CASE in ColorFormulas
-' 01.07.26 added GetRangeName, FirstNumberIndex, LastNumberIndex from model+BIB
-' 20.09.26 cut down to what a2-hires-lab.xlsm actually uses: Button_ macros, UDFs used in cells, Ctrl+I/J/K/R shortcuts,
-'          and everything called from JumpStation_, UserFormSelector, UserFormComment, WorksheetsMatrix_, Buttons
+' 20.09.26 A_ -> B_ as baseline for `a2-hires-lab`
 
 Option Explicit
 
@@ -82,7 +72,6 @@ Const R_VersionBox = "VersionBox"
 
 
 
-
 '>> Addresses
 
 Public Function GetAddress(r As Range, Optional bWithSheet As Boolean) As String
@@ -125,6 +114,7 @@ Sub RevertApplicationState()
     Application.StatusBar = PopStatusBar()
 End Sub
 
+
 '*************************************
 ' SafeGetApplicationStates
 '*************************************
@@ -137,6 +127,7 @@ Private Function SafeGetApplicationStates() As Collection
     If g_cApplicationStates Is Nothing Then ForceInitApplicationStates
     Set SafeGetApplicationStates = g_cApplicationStates
 End Function
+
 
 '*************************************
 ' push / pop
@@ -201,6 +192,10 @@ Function GetFromClipboard() As String
     GetFromClipboard = DataObj.GetText(1)
 End Function
 
+
+
+' >> Colors
+
 '*************************************
 ' helpers
 '*************************************
@@ -230,6 +225,7 @@ Sub ShowCommentForm(Optional sCaption = "")
     If sCaption <> "" Then frm.Caption = sCaption
     frm.Show
 End Sub
+
 
 '*************************************
 ' dumping comments
@@ -300,10 +296,10 @@ Function DumpAllCommentsForSheet(ws As Worksheet, rAnchor As Range, Optional bEx
         nComments = nComments + 1
         
         ' col 1: show address of comment (can be used for Ctrl-P)
-        rAnchor.Cells(nComments, 1).formula = "=GetAddress(" & rCommentCell.Address(External:=True) & ", " & IIf(bExternal, "true", "false") & ")"
+        rAnchor.Cells(nComments, 1).Formula = "=GetAddress(" & rCommentCell.Address(External:=True) & ", " & IIf(bExternal, "true", "false") & ")"
         
         ' col 1: show comment text
-        rAnchor.Cells(nComments, 2).formula = "=GetComment(" & rAnchor.Cells(nComments, 1).Address & ", true)"
+        rAnchor.Cells(nComments, 2).Formula = "=GetComment(" & rAnchor.Cells(nComments, 1).Address & ", true)"
         
     Next
     
@@ -422,54 +418,6 @@ End Function
 
 '>> Params
 
-' ****** new
-
-Function IntInc(ByRef ix As Variant, Optional start As Integer) As Integer
-    If IsEmpty(ix) Then ix = start
-    IntInc = ix
-    ix = ix + 1
-End Function
-
-Function StringifyParams(arrParams() As Variant) As Variant
-    ' how to call, w/ "tokens" a ParamArray
-    '     Dim arrParams(): arrParams = tokens: arrParams = StringifyParams(arrParams)
-
-    ' passed params come from a ParamArray which is 0-based
-    Debug.Assert LBound(arrParams) = 0
-    
-    Dim ixParam
-    Dim r As Range
-    
-    If ArrayCount(arrParams) = 1 Then
-        If TypeOf arrParams(LBound(arrParams)) Is Range Then
-            Dim rSingleParam As Range: Set rSingleParam = arrParams(LBound(arrParams))
-            Dim nCells As Integer: nCells = rSingleParam.Cells.Count
-            If nCells <> 1 Then
-                Dim expandedParams(): ReDim expandedParams(0 To nCells - 1)
-                
-                For Each r In rSingleParam.Cells
-                    Set expandedParams(IntInc(ixParam, 0)) = r
-                Next
-                
-                arrParams = expandedParams
-            End If
-        End If
-    End If
-    
-    For ixParam = LBound(arrParams) To UBound(arrParams)
-        If TypeOf arrParams(ixParam) Is Range Then
-            Set r = arrParams(ixParam)
-            ' http://stackoverflow.com/questions/6932901/how-do-i-retrieve-an-excel-cell-value-in-vba-as-formatted-in-the-worksheet
-            arrParams(ixParam) = r.Text
-        Else
-            Dim sParam As String: sParam = arrParams(ixParam)
-            arrParams(ixParam) = sParam
-        End If
-    Next
-    
-    StringifyParams = arrParams
-End Function
-
 Function DoFormatSentence2(sSentence As String, arrParams() As Variant) As String
     sSentence = Replace(sSentence, "\#", "@@@")
     
@@ -503,9 +451,10 @@ Function DoFormatSentence2(sSentence As String, arrParams() As Variant) As Strin
 End Function
 
 Function FS(sSentence As String, ParamArray tokens() As Variant) As String
-    Dim arrParams(): arrParams = tokens: arrParams = StringifyParams(arrParams)
+    Dim arrParams(): arrParams = tokens
     FS = DoFormatSentence2(sSentence, arrParams)
 End Function
+
 
 '*************************************
 ' lowlevel helpers
@@ -616,61 +565,6 @@ End Function
 
 
 '>> SheetJump
-
-'*************************************
-' stuff from Soli (row height change)
-'*************************************
-
-Sub Button_HideDisplayHeadingsOnSections()
-    HideDisplayHeadingsOnSections
-End Sub
-
-Sub Button_HideDisplayHeaders()
-    HideDisplayHeadings
-End Sub
-
-Sub Button_FreezeAllPanes()
-    FreezeAllPanes
-End Sub
-
-Sub HideDisplayHeadingsOnSections()
-    Dim wsOld: Set wsOld = ActiveSheet
-    Dim ws As Worksheet
-    For Each ws In Sheets
-        If IsSectionSheet(ws) Then
-            ws.Activate
-            ActiveWindow.DisplayHeadings = False
-        End If
-    Next
-    wsOld.Activate
-End Sub
-
-Sub HideDisplayHeadings()
-    SetSilentApplicationState
-    Dim old: Set old = ActiveSheet
-    Dim ws As Worksheet
-    For Each ws In Worksheets
-        If IsSectionSheet(ws) Then
-            ws.Activate
-            ActiveWindow.DisplayHeadings = False
-        End If
-    Next
-    old.Activate
-    RevertApplicationState
-End Sub
-
-Sub FreezeAllPanes()
-    Dim old: Set old = ActiveSheet
-    Dim ws As Worksheet
-    For Each ws In Worksheets
-        If NamedRangeExists("_", ws) Then
-            ws.Activate
-            ws.Range("_").Select
-            ActiveWindow.FreezePanes = True
-        End If
-    Next
-    old.Activate
-End Sub
 
 '*************************************
 ' show / hide sheets in section
@@ -853,6 +747,7 @@ Sub GotoPrevSection()
 done:
 End Sub
 
+
 '*************************************
 ' parts (bigger steps) - ^n, ^m
 '*************************************
@@ -875,6 +770,7 @@ Function SheetExists(sName, Optional wb As Workbook) As Boolean
     Dim wsExisting As Worksheet: Set wsExisting = wb.Worksheets(sName)
     SheetExists = Not (wsExisting Is Nothing)
 End Function
+
 
 '*************************************
 ' helpers
@@ -925,6 +821,7 @@ Function AsString(v As Variant) As String
     End If
 End Function
 
+
 '*************************************
 ' string <-> collection
 '*************************************
@@ -959,6 +856,7 @@ Public Function CollectionToString(c As Collection, Optional sDelim As String) A
     CollectionToString = s
 End Function
 
+
 '*************************************
 ' tests
 '*************************************
@@ -984,11 +882,6 @@ End Function
 
 '>> Util2
 
-Function ArrayCount(a() As Variant, Optional ixDimension As Integer) As Long
-    On Error Resume Next
-    If ixDimension = 0 Then ArrayCount = UBound(a) - LBound(a) + 1 Else ArrayCount = UBound(a, ixDimension) - LBound(a, ixDimension) + 1
-End Function
-
 Function CollectionToArray(c As Collection, Optional b2dim As Boolean = False) As Variant()
     Dim av()
     If b2dim Then ReDim av(1 To c.Count, 1 To 1) Else ReDim av(1 To c.Count)
@@ -1005,9 +898,9 @@ Function CollectionToArray(c As Collection, Optional b2dim As Boolean = False) A
     CollectionToArray = av
 End Function
 
-'*************************************
-' sheet helpers
-'*************************************
+
+
+' >> Version
 
 Sub SetVersion()
     Dim sVersion As String: sVersion = "Version: " & Format(Now, "YYMMDD vHHMM")
