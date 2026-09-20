@@ -5,7 +5,5 @@
 
 -r requirements.txt
 
-# Excel integration — Windows-only (PyXLL does not run on macOS).
-# Requires a PyXLL licence (already configured in the VM).
-pyxll>=5.12
-openpyxl
+# Nothing Windows-only is needed today. PyXLL goes here when the papple2
+# bridge becomes real (see TODO.md).

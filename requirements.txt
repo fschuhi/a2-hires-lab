@@ -2,6 +2,5 @@
 black>=24.0
 pytest>=8.0
 
-# Excel
-openpyxl
+# VBA export from the workbook (tools/export_vba.py)
 oletools
