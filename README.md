@@ -41,9 +41,9 @@ Planned: a Memory Map Viewer for the HGR pages.
 
 ## Running
 
-**Excel version.** The workbook needs Excel for Microsoft 365 or Excel 2024, on Windows or Mac. Several sheets use `TOROW`, and `Sprite Data` uses `LET`; older versions show `#NAME?` in those cells. On `Pixel Shifter`, the second of the three blocks ("2D range") does the same lookup without `TOROW`. Excel for the web can open the file but cannot run macros. LibreOffice has not been tested. The workbench was built for my own exploration, so I have not tried to support older versions. Developed and tested with Excel for Microsoft 365 on Windows 11.
+**Excel version.** The workbook needs Excel for Microsoft 365 or Excel 2024, on Windows running natively or under Parallels on macOS. Several sheets use `TOROW`, and `Sprite Data` uses `LET`; older versions show `#NAME?` in those cells. On `Pixel Shifter`, the second of the three blocks ("2D range") does the same lookup without `TOROW`. Excel for the web can open the file but cannot run macros. LibreOffice has not been tested. The workbench was built for my own exploration, so I have not tried to support older versions. Developed and tested with Excel for Microsoft 365 on Windows 11.
 
-**Macros.** `a2-hires-lab.xlsm` contains VBA macros, and parts of the workbook depend on them: the buttons on the sprite sheets, and custom functions such as `ReverseString` and `HexToBits` that worksheet formulas call. Without macros, those cells show `#NAME?`. Windows Excel blocks macros in files downloaded from the internet. Before opening the file, right-click it in Explorer, choose Properties, and tick "Unblock" on the General tab. On Mac, Excel asks whether to enable macros when the file opens. All VBA source is also in `src/bas/` as plain text, so you can read it before enabling anything.
+**Macros.** `a2-hires-lab.xlsm` contains VBA macros, and parts of the workbook depend on them: the buttons on the sprite sheets, and custom functions such as `ReverseString` and `HexToBits` that worksheet formulas call. Without macros, those cells show `#NAME?`. Windows Excel blocks macros in files downloaded from the internet. Before opening the file, right-click it in Explorer, choose Properties, and tick "Unblock" on the General tab. On Mac, Excel asks whether to enable macros when the file opens. All VBA source is also in `src/bas/` as plain text, so you can read it before enabling anything. The sources include not only functionality specific to `a2-hires-lab`, but also a general-purpose Excel toolkit, MIT-licensed.
 
 ```bash
 make setup        # create venv, install dependencies (papple2-side, not yet used by the workbook)
@@ -70,7 +70,6 @@ There's no automated test suite yet. Correctness is checked by hand against Chap
 - [Settled decisions](#settled-decisions)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Prior art](#prior-art)
-- [Technical notes & gotchas](#technical-notes--gotchas)
 - [License and Attribution](#license-and-attribution)
 
 ---
@@ -388,13 +387,7 @@ If a direct 1,792-byte table is smaller and faster, why did the disassembly use 
 
 The equivalence was checked for every case: all 896 pattern/shift combinations, followed through `pixel_shift_table.asm` into `pixel_pattern_table.asm`, give exactly the shifted bytes, and all 512 pattern entries are used. `PIXEL_PATTERN_TABLE` is reached only through the shift table; the chapter's cross-reference lists no other code that uses it.
 
-This lab proves that the entire 2-stage dictionary can be collapsed into a single, direct 1,792-byte table without losing a single bit of functionality.
-
----
-
-## How the workbook is built
-
-**Build mechanic:** the sheet layout is generated (`openpyxl`) and the VBA modules are authored as plain-text `.bas` files, imported into Excel by hand rather than fabricated as a binary `.xlsm` -- see Technical notes below for why. Confirmed working round-trip: a real Excel-saved `.xlsm`'s VBA source can be read back losslessly via `oletools`/`olevba`, which is how future sessions read the modules directly from `a2-hires-lab.xlsm` instead of needing separate `.bas` copies in the filesdump.
+This lab shows that the entire 2-stage dictionary cold be collapsed into a single, direct 1,792-byte table (most likely) without losing any functionality.
 
 ---
 
@@ -425,15 +418,6 @@ This lab proves that the entire 2-stage dictionary can be collapsed into a singl
 ## Prior art
 
 François Vander Linden's **`bitmap_creator`** (Excel, formula-driven, no VBA) validates that "Excel + colored cells" works for hi-res visualization, and its documented color rules confirm our NTSC decision table independently. It's not a basis for this project: it's a general 70x192-pixel screen-fragment editor with no notion of sprites, no game-data awareness, and its color logic lives in conditional-formatting formulas rather than readable code.
-
----
-
-## Technical notes & gotchas
-
-- **A multi-area named range needs its sheet name repeated on every area, not just the first.** `ViewerGrid` (`B17:H27,J17:P27`) silently lost its second area on save until both areas were sheet-qualified -- Excel strips the whole name on open with no error at save time ("Reparaturen"/repair dialog instead).
-- **`Hex0`/`Hex1` include the high bit; the chapter's printed byte values don't.** Not a bug -- see Settled decisions -- but easy to trip over when comparing against the PDF directly.
-- **Reading VBA back out of a `.xlsm` via `oletools`/`olevba` only works against a file that's genuinely been through Excel.** Confirmed reliable, byte-for-byte, against a real Excel-saved file. A file with freshly-authored-but-never-opened-in-Excel Basic code (tried via LibreOffice UNO scripting) does not contain a real `vbaProject.bin` and yields nothing -- this is a limitation of authoring VBA outside Excel, not of the reading tool.
-- **`BITAND`-based masking formulas make Excel silently add a hidden compatibility defined name** (e.g. `_xleta.AND`). Harmless, Excel-managed -- don't try to keep it in sync with anything by hand.
 
 ---
 
