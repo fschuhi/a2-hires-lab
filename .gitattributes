@@ -1,5 +1,3 @@
-# haddolib — .gitattributes
-#
 # This repo lives on macOS; the Windows VM reaches the SAME working tree through
 # the Y: share (one .git, one set of checked-out files). To stop Windows git from
 # writing CRLF into the shared files on checkout — which the Mac would then see as

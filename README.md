@@ -46,7 +46,7 @@ Planned: a Memory Map Viewer for the HGR pages.
 **Macros.** `a2-hires-lab.xlsm` contains VBA macros, and parts of the workbook depend on them: the buttons on the sprite sheets, and custom functions such as `ReverseString` and `HexToBits` that worksheet formulas call. Without macros, those cells show `#NAME?`. Windows Excel blocks macros in files downloaded from the internet. Before opening the file, right-click it in Explorer, choose Properties, and tick "Unblock" on the General tab. On Mac, Excel asks whether to enable macros when the file opens. All VBA source is also in `src/bas/` as plain text, so you can read it before enabling anything. The sources include not only functionality specific to `a2-hires-lab`, but also a general-purpose Excel toolkit, MIT-licensed.
 
 ```bash
-make setup         # create venv, install dependencies
+make setup        # create venv, install dependencies
 make export-vba    # write the workbook's VBA modules into src/bas/ as plain text
 make filesdump     # export VBA, then regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
 ```
@@ -70,6 +70,7 @@ There's no automated test suite yet. Correctness is checked by hand against Chap
 - [Settled decisions](#settled-decisions)
 - [Relation to sibling projects](#relation-to-sibling-projects)
 - [Prior art](#prior-art)
+- [Project Structure](#project-structure)
 - [License and Attribution](#license-and-attribution)
 
 ---
@@ -123,6 +124,8 @@ Byte-boundary behavior: a pixel's color always comes from *its own byte's* high 
 
 - **Color depends on the pixel's absolute screen column, not its position within the sprite row.** The NTSC color-subcarrier phase is fixed to the physical screen, not to wherever a sprite is drawn -- which is exactly why the game's own pixel-shift machinery (`COMPUTE_SHIFTED_SPRITE`) has to exist. `RowColors` takes an absolute `iBaseCol` plus true left/right screen neighbors instead of assuming an isolated sprite at column 0.
 - **A colored "sandwiched" 0-pixel takes its hue from its flanking 1-bit's column, not its own.** Colouring it from its own (necessarily opposite-parity) column produces alternating stripes for a repeating `0x55`-style byte; real Apple II hi-res renders that as one solid fill. Found by reproducing the chapter's own worked "5"-shaped sprite pixel-for-pixel and noticing the mismatch.
+
+Pixels outside the sprite (left of column 0, right of column 13) are treated as 0, matching the chapter's example renderings. On a real screen, lit pixels in the neighboring bytes would also count.
 
 ---
 
@@ -246,7 +249,7 @@ flowchart TD
         HI --> ADDR["Address: $HiLo<br/>e.g. $A95A"]
         LO --> ADDR
         ADDR -->|"Read byte"| B0["Byte 0 (e.g. $B0)<br/>%10110000"]
-        ADDR -->|"Read +1 byte"| B1["Byte 1 (e.g. $81)<br/>%10000001"]
+        ADDR -->|"Read +1 Byte"| B1["Byte 1 (e.g. $81)<br/>%10000001"]
     end
 
     subgraph Outputs ["Output 14-Pixel Screen Window"]
@@ -400,7 +403,7 @@ This lab shows that the entire 2-stage dictionary cold be collapsed into a singl
 - **A colored 0-pixel inherits its hue from its flanking 1-bit, not its own column.** See Architecture above; confirmed against the chapter's own worked sprite, not just the short illustrative fragments.
 - **Both buttons are idempotent by construction.** Full overwrite of every owned cell from current inputs, every run -- no accumulation, no half-updated state.
 - **`Hex0`/`Hex1` store the byte as the game actually holds it (high bit included), not as the chapter prints it.** E.g. the chapter's `0x55` is `0xD5` in `Hex0` once `HB0` defaults to 1. A known, minor mismatch for eyeballing against the PDF -- not a bug (see `TODO.md`).
-- **Sheet layout as generated `.xlsx` + hand-imported `.bas` text modules, not a fabricated `.xlsm`.** Neither this environment nor LibreOffice can reliably emit a genuine Excel-compatible VBA binary from outside Excel; importing separately-authored text modules is reliable and keeps VBA source under version control as plain text.
+- **The workbook is the source of truth for the VBA; `src/bas/` is a one-way export.** Modules are edited in the VBA editor and written to `src/bas/` by `make export-vba`, so the code can be read on GitHub and diffed in git. The exported files are never imported back.
 - **`HB0`/`HB1` default to 1** in a freshly laid-out editor, matching what the game actually does at runtime (`sprite_data.asm`'s raw bytes are 7-bit, 0x00-0x7F; the high bit is OR'd in elsewhere in the game's own pipeline).
 - **Direct table access for Pixel Shifting.** Shift lookups route directly through `PIXEL_SHIFT_PAGES` into `pixel_shift_table.asm` and `pixel_pattern_table.asm` rather than relying on intermediate display representations, keeping logic faithful to 6502 memory architecture.
 - **Middle byte `BITOR` automatically preserves color bit.** Merging shifted byte overflow ($A_1$) with shifted byte head ($B_0$) via `BITOR` naturally maintains bit 7 as 1 without requiring additional bit manipulation.
@@ -418,6 +421,42 @@ This lab shows that the entire 2-stage dictionary cold be collapsed into a singl
 ## Prior art
 
 François Vander Linden's **`bitmap_creator`** (Excel, formula-driven, no VBA) validates that "Excel + colored cells" works for hi-res visualization, and its documented color rules confirm our NTSC decision table independently. It's not a basis for this project: it's a general 70x192-pixel screen-fragment editor with no notion of sprites, no game-data awareness, and its color logic lives in conditional-formatting formulas rather than readable code.
+
+---
+
+## Project Structure
+
+```
+a2-hires-lab/
+├── a2-hires-lab.xlsm               ← The workbench (Excel for Microsoft 365, macros)
+├── src/bas/                        ← VBA modules, exported from the workbook (`make export-vba`)
+│   ├── SpriteEditor.bas            ← Update Viewer / Load from Bytes, sprite loader
+│   ├── NTSCColor.bas               ← NTSC colour decision table
+│   ├── Util.bas                    ← Hex/bit helpers called by worksheet formulas
+│   ├── Buttons.bas                 ← Parameterless wrappers for the sheet buttons
+│   ├── Macros.bas                  ← Keyboard entry points
+│   ├── B_.bas                      ← Base library (subset of my general Excel library)
+│   ├── JumpStation_.bas            ← Sheet navigation
+│   ├── WorksheetsMatrix_.bas       ← Builds the `Worksheets matrix` sheet
+│   └── UserForm*.frm / .frx        ← Forms used by the library
+├── data/lode_runner_reveng/        ← From XekriRedmane's disassembly (CC BY-SA 4.0)
+│   ├── *.asm                       ← Sprite data and shift tables, as in the original repo
+│   └── main-chapter-3.md / .pdf    ← Chapter 3: Apple II graphics
+├── tools/
+│   ├── export_vba.py               ← One-way VBA export, xlsm -> src/bas/
+│   └── concat_files.py             ← Filesdump generator for LLM sessions
+├── img/                            ← README screenshot
+├── GOALS.md                        ← Roadmap
+├── TODO.md                         ← Open tasks
+├── HISTORY.md                      ← Record of finished work
+├── LICENSE                         ← MIT (code)
+├── LICENSE-CC-BY-SA-4.0.md         ← CC BY-SA 4.0 (docs and data)
+├── Makefile                        ← setup, export-vba, filesdump
+├── manifest.lst                    ← File list for filesdump generation
+└── pyproject.toml, requirements*.txt
+```
+
+The LLM collaboration files listed in `manifest.lst` (`CRITICAL_RULES.md`, `LLM_INSTRUCTIONS.md`, `FIRST_PROMPT.md`) are kept out of this repo. Parts of this project were developed in conversation with LLMs; every technical claim is checked against the disassembly and the workbook.
 
 ---
 

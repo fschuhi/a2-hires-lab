@@ -10,9 +10,6 @@ LLM_INSTRUCTIONS.md
 manifest.lst
 tmp/project_tree.txt
 
-# An Excel workbook for exploring Apple II hi-res graphics mechanics
-a2-hires-lab-design.md
-
 # standard project documentation (probably slightly out of sync)
 README.md
 GOALS.md
@@ -20,7 +17,7 @@ TODO.md
 HISTORY.md
 
 # licensing, see also `READMD.md`
-#LICENSE.md
+#LICENSE
 #LICENSE-CC-BY-SA-4.0.md
 
 ### --- Build & Python Configuration ---
@@ -58,6 +55,7 @@ src/bas/Util.bas
 
 ### --- DevOps tools ---
 #tools/concat_files.py
+#tools/export_vba.py
 
 ### --- Tests ---
 # TBA
