@@ -9,7 +9,8 @@
 # from the POSIX shell on both sides.
 #
 # Note: on Windows, PYTHON = `py -3` so the venv is built by NATIVE Windows
-# Python (required for PyXLL), not MSYS2's python. Override if needed, e.g.:
+# Python (Scripts/ layout, as the block above expects), not MSYS2's python.
+# Override if needed, e.g.:
 #   make setup PYTHON=python
 
 # --- OS-specific variables ---

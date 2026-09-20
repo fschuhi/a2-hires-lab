@@ -58,7 +58,7 @@ src/bas/Util.bas
 #tools/export_vba.py
 
 ### --- Tests ---
-# TBA
+tests/test_shift_tables.py
 
 ### --- Data ---
 #data/lode_runner_reveng/main.nw_chapter-3.pdf
