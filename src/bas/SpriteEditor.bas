@@ -14,7 +14,6 @@ Option Explicit
 ' Bits0/Bits1 are NOT written here -- they are worksheet formulas
 ' (=HexToBits(...)) that follow Hex0/Hex1 automatically.
 
-Private Const SHEET_NAME As String = "Sprite Editor-Viewer"
 Private Const ROW_FIRST As Long = 4          ' editor/hex row for sprite row 0
 Private Const VIEWER_ROW_FIRST As Long = 17  ' viewer row for sprite row 0
 Private Const COL_HB0 As Long = 9            ' I

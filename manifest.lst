@@ -34,7 +34,6 @@ requirements-win.txt
 src/bas/Buttons.bas
 src/bas/Macros.bas
 src/bas/NTSCColor.bas
-src/bas/PixelShifter.bas
 src/bas/SpriteEditor.bas
 src/bas/Util.bas
 
