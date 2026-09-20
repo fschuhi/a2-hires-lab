@@ -8,26 +8,14 @@
 
 ## 📍 Current Session Pointer
 
-## Where we are -- 2026-09-19
+## Where we are -- 2026-09-20
 
-- **Phase 1 (Sprite Editor/Viewer) Complete:** Built the foundational 11x14 editing grid with pixel/byte dual-representation and strict idempotent macro contracts. The full NTSC nearest-neighbor color decision table is implemented in `NTSCColor.bas` and verified pixel-for-pixel against Chapter 3's worked examples.
-- **Phase 2 (Sprite Inventory) Complete:** Reflowed `sprite_data.asm` from its byte-position-major 6502 storage format (stride 104) into human-readable 22-byte sprite rows. Added the address lookup table and loader macro on `Sprite Loader`.
-- **Phase 3 (Pixel Shifter) Complete:** Built the unified 7-shift `Pixel Shift Table` with a single universal formula mapping all 1,792 entries directly to `pixel_shift_table.asm`. Constructed the live 2-stage dictionary engine on `Pixel Shifter` (`PIXEL_SHIFT_PAGES` -> `pixel_shift_table.asm` -> `pixel_pattern_table.asm`) with both `TOROW` and Ariexcel-navigable 2D matrix formulas, fully documenting the 512-pattern mechanics and architecture in `README.md`.
-- **Phase 4 (Sprite Shifter) Complete:** Built live formula engine on `Sprite Shifter` linking directly to `'Sprite (load)'` and 2D matrix lookups into `pixel_shift_table.asm` and `pixel_pattern_table.asm`. Implemented middle-byte `BITOR` merge and 21-column screen bitfield across all 11 rows. Added direct "rewritten in place" lookup model on `Pixel Shifter` bypassing indirection.
+Phases 1-4 are complete and the repo is public. The 2026-09-20 session reviewed the whole project from a visitor's point of view: `README.md` rewritten and its 6502 documentation corrected and quantified, licensing split (MIT for code, CC BY-SA 4.0 for docs and Xekri-derived data), `make export-vba`, and the first tests. Details in `HISTORY.md`.
 
-## What's Next: Polish, Shift Lookup Analysis & Literate-Source Sync (Prior to Phase 5)
+## What's next
 
-1. **Shift Table Optimization Architecture (`README.md`):**
-   - Document why the two-stage dictionary (`PIXEL_SHIFT_TABLE` -> `PIXEL_PATTERN_TABLE`) could be consolidated into a single direct 1,792-byte lookup table without indirection, saving 1,024 bytes of table storage and eliminating 6502 cycle overhead.
-
-2. **Workbench Polish:**
-   - Clean up formatting, labels, and auditing navigation on `Sprite Shifter` and `Pixel Shifter`.
-
-3. **Literate-Source Sync (`load-runner`):**
-   - Transfer key findings, lookup breakdown tables, and Mermaid visual mechanics flows into the working Lode Runner literate source.
-
-4. **Phase 5 (Deferred):**
-   - Memory Map Viewer (HGR1/HGR2 page visualization).
+1. **Phase 5 design session.** Phase 5 is underdetermined; it needs a discussion that ends in a design document under `docs/`, not a coding session. See the roadmap below.
+2. **Then the literate-source sync into `load-runner`.** The markdown -> HTML pipeline gets sorted out first, outside this project.
 
 ---
 
@@ -35,26 +23,38 @@
 
 An Excel workbook that makes the Apple II hi-res graphics system tangible — not as a general-purpose bitmap editor, but as a lab tightly coupled to the Lode Runner disassembly. Each sheet illuminates one layer of the graphics machinery: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen.
 
-The workbook also serves as a ground-truth reference for the `papple2` emulator: the NTSC color rules, once verified visually in Excel, become test cases that drive improvements to `Display.update_hires`.
+Excel stays prototypal on purpose. When something needs to run rather than be inspected, it belongs in native Python (`papple2`) or in the disassembly project (`load-runner`), not bolted onto the workbook.
+
+The second audience is the disassembly itself. Findings that started here -- the corrected shift-lookup documentation, the cycle comparison, the verification tests -- flow back into `load-runner`'s literate source, which is also the path towards taking that project public.
+
+**Open question:** is `a2-hires-lab` a Lode Runner lab or an Apple II graphics lab? Adding `probotron`'s Robotron 2084 sprite mechanics (see `TODO.md`) only makes sense under the second reading, and it would turn the workbook into a compendium of the different ways Apple II games do graphics. The answer shapes the README's first sentence, the sheet structure, and how the data folders are laid out. It does not need deciding yet, but it should not decide itself by accident.
 
 ---
 
 ## 🗺️ Phased roadmap
 
 ### Phase 1 — Sprite Editor/Viewer -- done 2026-09-17
-Build the core worksheet: pixel grid editor, NTSC color viewer, hex/bits byte display, two-button workflow (pixels → bytes, bytes → pixels). VBA-driven, no conditional formatting.
+Core worksheet: pixel grid editor, NTSC color viewer, hex/bits byte display, two-button workflow (pixels → bytes, bytes → pixels). VBA-driven, no conditional formatting.
 
-### Phase 2 — Sprite Inventory ← we are here
-Add a sheet with all 104 Lode Runner sprites from `sprite_data.asm`, reorganized from interleaved layout. Selectable into the editor via dropdown + Load button. Named sprite labels from the EQU defines. Core machinery (reflow table, address table, load macro) done 2026-09-17; dropdown/picker UI postponed.
+### Phase 2 — Sprite Inventory -- done 2026-09-17
+All 104 Lode Runner sprites from `sprite_data.asm`, reorganized from the interleaved layout, loadable into the editor. Dropdown/picker UI postponed; the typed sprite number remains the interface (see `TODO.md`).
 
-### Phase 3 — Pixel Shifter
-Visualize the table-lookup chain from Chapter 3 §3.3: enter a 7-bit pattern and shift amount, watch the indirection through `PIXEL_SHIFT_PAGES`, `PIXEL_SHIFT_TABLE`, and `PIXEL_PATTERN_TABLE`. Scratchpad cells mirror 6502 register state at each step.
+### Phase 3 — Pixel Shifter -- done 2026-09-18
+The table-lookup chain from Chapter 3 §3.3: enter a 7-bit pattern and a shift amount, follow the indirection through `PIXEL_SHIFT_PAGES`, `PIXEL_SHIFT_TABLE` and `PIXEL_PATTERN_TABLE`, in three equivalent formula styles.
 
-### Phase 4 — Sprite Shifter (next session, per 2026-09-17 discussion -- order vs. Phase 3 TBD)
-Apply the Pixel Shifter to a full sprite (all 22 bytes), reproducing `COMPUTE_SHIFTED_SPRITE`. Show the OR step for the overlapping middle byte. Output loadable back into the editor.
+### Phase 4 — Sprite Shifter -- done 2026-09-19
+The Pixel Shifter applied to a whole sprite (all 22 bytes), reproducing `COMPUTE_SHIFTED_SPRITE` including the `BITOR` merge of the overlapping middle byte, plus the direct-lookup model that led to the architectural analysis in `README.md`.
 
-### Phase 5 — Memory Map Viewer
-Two sheets (HGR1, HGR2) with small cells showing the 8 KB graphics pages, making the non-consecutive row layout visible.
+### Phase 5 — Closing the chain: from shifted bytes to the screen (needs a design session)
+The workbook currently stops at three shifted bytes in `BLOCK_DATA`; nothing shows them reaching the screen. Chapter 3 §3.4 and §3.5 hold the missing machinery. Two halves, 5a first because it makes 5b possible:
 
-### Ongoing — `papple2` integration
-Derive test fixtures from the workbook's NTSC rendering. Write failing tests, then fix `Display.update_hires` to implement the full adjacency-based color model.
+- **5a — Memory map.** All 192 screen rows resolved to addresses via `ROW_TO_OFFSET_LO` / `ROW_TO_OFFSET_HI`, for both HGR pages, making the non-consecutive row layout visible, including where the status line sits.
+- **5b — Sprite placement.** Game row and column to screen row, byte offset and shift amount (`GET_BYTE_AND_SHIFT_FOR_COL`), then the masked merge of the three `BLOCK_DATA` bytes into the screen bytes with `PIXEL_MASK0` / `PIXEL_MASK1`, the way `DRAW_SPRITE` does it.
+
+Scope, sheet layout and how much of `DRAW_SPRITE` to reproduce are open. The design session decides them and produces a design document under `docs/`.
+
+### Ongoing — Literate-source sync into `load-runner`
+Carry the findings into the Lode Runner literate source: mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` documentation, the cycle comparison, the Mermaid diagram, the verification tests. Sequenced after Phase 5, so that the whole graphics pipeline travels at once rather than a story that stops halfway. Counter-argument worth keeping in view: Xekri's Ultima work and his markdown/HTML pipeline are current, and goodwill has a half-life -- if that window matters more than completeness, this moves ahead of Phase 5.
+
+### Ongoing — `papple2`
+Low priority within this project. Test fixtures derived from the workbook and the adjacency work on `Display.update_hires` are better done in `load-runner`, where running subroutines against the disassembly makes sense.

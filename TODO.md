@@ -12,28 +12,43 @@
 
 ---
 
-## Deliverable Enhancements
+## Workbook
 
-- Sprite Editor enhancements: `Worksheet_Change` hook to replace the button-click workflow with live updates on edit -- still open, being handled directly in VBA.
-- Sprite Inventory enhancements (Phase 2): sprite picker/dropdown UI postponed; typed sprite number (`Sprite Loader!C4`) remains the interface for now.
-- Sprite Shifter visual painter (Phase 4): add a lightweight VBA macro button to paint the 21-cell row background colors underneath the screen bitfield using `NTSCColor.RowColors`.
-- _Needs investigation, low priority:_ two bytes in `sprite_data.asm` (sprites 102/103, row 10 byte 2) have their high bit set in storage, unlike every other byte in the table -- colored on `SPRITE_DATA` 2026-09-17. Possibly a disassembly-reconstruction artifact rather than deliberate game data; revisit if it ever matters for round-trip export.
-- ~~Sprite Shifter sheet (Phase 4) -- decide on 21-column viewer mode vs. crop-to-14. Apply shift mechanics across all 22 sprite bytes to reproduce `COMPUTE_SHIFTED_SPRITE` and show the middle-byte OR step.~~ -- done 2026-09-19: built live formula engine on `Sprite Shifter` linking directly to `'Sprite (load)'` and 2D matrix lookups into `pixel_shift_table.asm` and `pixel_pattern_table.asm`; implemented middle-byte `BITOR` merge and 21-column screen bitfield across all 11 rows.
-- Save sprite: export editor content back to `sprite_data.asm` interleaved format, enabling round-trip editing.
+- `NTSCColor` refactoring: get rid of `FIRST_COL` and `LAST_COL` in favor of local named range access. Do this before the Sprite Shifter row painter.
+- `Sprite (load)`: spin control next to the sprite number cell `'Sprite (load)'!X1`, so one can flip through the sprite inventory easily.
+- Sprite Editor: `Worksheet_Change` hook that runs `LoadSpriteFromTable` when `'Sprite (load)'!X1` changes -- higher priority than the other event-based updates.
+- Sprite Editor: `Worksheet_Change` hook to replace the button-click workflow with live updates on edit -- still open, being handled directly in VBA.
+- Sprite Inventory: sprite picker/dropdown UI postponed; the typed sprite number in `'Sprite (load)'!X1` remains the interface for now.
+- Workbook documentation: cell comments across the sheets, so that the "> comments <" navigation has something to show, plus text boxes with short explanations and pointers into `README.md`.
+- _Low priority:_ Sprite Shifter row painter -- a lightweight VBA macro button that paints the 21-cell row background colors underneath the screen bitfield using `NTSCColor.RowColors`. Only after the `NTSCColor` refactoring. Seeing that the shifting works is enough for now.
+- _Low priority:_ Save sprite -- export editor content back to `sprite_data.asm` interleaved format, enabling round-trip editing.
 
-## Immediate Next Steps (Prior to Phase 5)
+## Tests
 
-- Workbench polishing: clean up formatting, range labels, and sheet navigation across `Sprite Shifter` and `Pixel Shifter`.
-- Shift lookup analysis & documentation: document why the two-stage dictionary (`PIXEL_SHIFT_TABLE` -> `PIXEL_PATTERN_TABLE`) could be consolidated into a single direct 1,792-byte lookup table without indirection, saving 1,024 bytes and 6502 cycles. Add architecture section to `README.md`.
-- Literate-source sync: integrate findings, mapping tables, and Mermaid visual mechanics into the working Lode Runner literate source in `load-runner`.
+In the style of `tests/test_shift_tables.py`: plain `pytest`, reading the `.asm` files, no new dependencies.
+
+- Direct table equivalence: build the 1,792-byte direct table from `pixel_shift_table.asm` and `pixel_pattern_table.asm`, then check that it yields the same two bytes as the two-stage lookup for all 896 pattern/shift combinations. This is the central claim of the "Architectural Analysis" section in `README.md`.
+- Shift table invariants: every offset in `pixel_shift_table.asm` is even (which is why the game can use a plain `ADC #$01` for the second byte), and every page byte lies between `$A9` and `$AC`.
+- Sprite data structure: `sprite_data.asm` holds 2,288 bytes; the interleaving stride is 104; every byte has bit 7 set except the two known exceptions below.
+
+## Data questions
+
+- _Needs investigation, low priority:_ two bytes in `sprite_data.asm` (sprites 102/103, row 10 byte 2) have their high bit set in storage, unlike every other byte in the table -- colored on `Sprite Data` 2026-09-17. Possibly a disassembly-reconstruction artifact rather than deliberate game data; revisit if it ever matters for round-trip export.
+
+## Documentation
+
+- Literate-source sync: integrate the findings into the Lode Runner literate source in `load-runner` -- mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` excerpt, the cycle comparison, the Mermaid visual mechanics diagram, and the verification test. Strategic framing in `GOALS.md`.
+- ~~Shift lookup analysis & documentation: document why the two-stage dictionary (`PIXEL_SHIFT_TABLE` -> `PIXEL_PATTERN_TABLE`) could be consolidated into a single direct 1,792-byte lookup table without indirection, saving 1,024 bytes and 6502 cycles. Add architecture section to `README.md`.~~ -- done 2026-09-20: "Architectural Analysis" section in `README.md` with the self-modifying-code excerpt, the cycle comparison (about 1,824 vs. 1,208 per call), the verification of all 896 combinations, and `tests/test_shift_tables.py`.
 
 ## `papple2` integration
 
-- Derive test fixtures (sprite bytes + expected pixel RGB per cell) from the workbook once Deliverable 1 is verified.
+Low priority here: the sensible home for `papple2` work is `load-runner`, where running subroutines against the disassembly makes more sense than in a spreadsheet.
+
+- Derive test fixtures (sprite bytes + expected pixel RGB per cell) from the workbook.
 - Write failing tests for `Display.update_hires` adjacency logic.
 
 ## Scratchpad / ideas
 
-- PyXll bridge: call `papple2` color logic from Excel, compare against VBA rendering side-by-side.
+- `probotron` sprite mechanics: bring the Robotron 2084 sprite handling from the `papple2`-based `probotron` workbench into this workbook. Low urgency, strategically important: it would turn `a2-hires-lab` into a compendium of the different ways Apple II games do graphics.
 - Half-pixel / 560-column viewer mode for NTSC phase-shift visualization.
 - Emulator-driven verification: load Lode Runner in `papple2`, run `DRAW_SPRITE_PAGE1`, capture screen buffer, compare.

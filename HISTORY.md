@@ -9,13 +9,35 @@
 
 ---
 
+## 2026-09-20 -- Public release: README overhaul, licensing, VBA export, first tests
+
+Repo made public. Session spent reviewing the whole project for how it reads from the outside, rather than on Phase 5.
+
+**README rewritten for visitors.** Reordered so the first screens answer "what is this and what can I try": "What this is" with a one-line hook at the direct-table finding, a "What's in the workbook" table of sheets replacing the phase-based status table, "Design choices", and "Running" moved up and opened with two new paragraphs (Excel version requirements, macro security and the Unblock step on Windows). Added a "Project Structure" tree and shortened the table of contents. Phase numbers left the README; they live in `GOALS.md` now.
+
+**6502 documentation corrected.** The assembly snippets written by Gemini were wrong: `(TMP_PTR+128),Y` is not valid 6502, and "two single-cycle indexed loads" mis-stated the cost (`LDA abs,Y` is 4 cycles). Replaced with an excerpt of the real `COMPUTE_SHIFTED_SPRITE`, which patches the shift page into its own lookup instructions, plus a plain-language explanation of that self-modifying code. Noted that every shift-table offset is even, which is why the routine can use a bare `ADC #$01` for the second byte. Also fixed the Mermaid diagram's worked example (`$A95A` holds `$B0 $81`, not `$94 $82`), dropped the invented "at 60 Hz" claim, and removed the collision-detection hypothesis, which nothing supports.
+
+**Direct-table saving quantified and verified.** Beyond the 1,024 bytes, the single 1,792-byte table would cut `COMPUTE_SHIFTED_SPRITE` from about 1,824 to about 1,208 cycles per call (56 per row, 616 per sprite: roughly a third), which matters because every sprite draw and erase calls it. Independently checked all 896 pattern/shift combinations through both tables against the arithmetic: no mismatch, all 512 pattern entries used, all distinct. The chapter's cross-reference shows `PIXEL_PATTERN_TABLE` has no other consumer, so collapsing the two stages is safe.
+
+**Licensing split.** Code (VBA, formulas, Python tools) is MIT via `LICENSE`; documentation and the Xekri-derived data stay CC BY-SA 4.0 via `LICENSE-CC-BY-SA-4.0.md`. Reasoning: ShareAlike is inherited only where his material is adapted, MIT matches the intent that the code be reusable, and the technical ideas are free regardless since copyright covers wording, not facts. Added two-line SPDX headers to the VBA modules and a license line on `Intro`.
+
+**VBA export tool.** `tools/export_vba.py` plus `make export-vba`, wired into both filesdump targets. The workbook is the source of truth; `src/bas/` is a one-way export for reading on GitHub and for LLM sessions. Written because the hand-maintained copies had already drifted.
+
+**First tests.** `tests/test_shift_tables.py` (10 tests) re-runs the table verification from the `.asm` files, so the README's claims can be reproduced with `make test` -- which previously failed, because `pytest` found no tests at all.
+
+**Workbench became a real workbench.** `Intro` sheet with feature list and section hide/show buttons, `Versions` sheet, jump-station navigation, `Worksheets matrix`, data-flow boxes and labels on the complex sheets, backed by a subset of my general Excel library (`B_`, `JumpStation_`, `WorksheetsMatrix_`).
+
+**Cleanups.** Removed leftover template artifacts (two stray UserForms, the broken `AllTags` name, four `GET.CELL` XLM names, German LAMBDAs), the deprecated `PixelShifter.bas`, the dead `SHEET_NAME` constant, and `Apple.py`. Renamed `SPRITE_DATA` to `Sprite Data` and removed the VBA constant that would have broken on the rename. Deleted the obsolete `a2-hires-lab-design.md`. Untracked the stencil-managed collaboration files. Trimmed requirements (`openpyxl` and `pyxll` out, `oletools` in) and restructured `TODO.md` by theme.
+
+**Decisions taken.** `papple2` work belongs in `load-runner`, where running subroutines against the disassembly makes sense, not in a spreadsheet. PyXLL dropped: native Python is the better direction, and Excel stays prototypal on purpose. LLM collaboration is stated plainly in the README rather than hidden. `probotron`'s Robotron 2084 sprite mechanics noted as the direction that would make this a compendium of Apple II graphics techniques.
+
 ## 2026-09-19 -- Phase 4: Sprite Shifter & direct lookup model
 
 - Built the complete horizontal sprite shifting engine on `Sprite Shifter`, linking directly to the raw 7-bit keys on `'Sprite (load)'` and reproducing the 11-row `COMPUTE_SHIFTED_SPRITE` pipeline.
 - Implemented the two-stage dictionary lookups via 2D matrix arithmetic (`INT(...) + 1`, `MOD(...) + 1` across 16-byte boundaries) directly into `pixel_shift_table.asm` and `pixel_pattern_table.asm`, preserving full formula auditability.
 - Modeled the 33-byte `BLOCK_DATA` staging area (11 rows × 3 bytes), implementing the exact middle-byte bitwise merge via `=BITOR(...)` to combine shifted Byte 0 overflow with shifted Byte 1 head while naturally preserving the high-bit color flag.
 - Built the 21-column screen bitfield (`AA6:AY16`) with stripped high bits and LSB-first pixel reflection, visually confirming smooth horizontal sprite movement across screen byte boundaries for all shifts 0..6.
-- Added the "rewritten in place" direct shift lookup model on `Pixel Shifter` via `Pixel Shift Pattern Table`, demonstrating that consolidating the two split tables into a single 1,792-byte direct lookup eliminates indirection and would save 1,024 bytes and 6502 cycles in the original game engine.®
+- Added the "rewritten in place" direct shift lookup model on `Pixel Shifter` via `Pixel Shift Pattern Table`, demonstrating that consolidating the two split tables into a single 1,792-byte direct lookup eliminates indirection and would save 1,024 bytes and 6502 cycles in the original game engine.
 
 ## 2026-09-18 -- Phase 3: Pixel shifter
 
@@ -28,7 +50,7 @@
   3. Reading the split 16-bit pattern address (`Lo` from the first 128 bytes, `Hi` from the second 128 bytes).
   4. Resolving the two output bytes from the 512-entry gallery in `pixel_pattern_table.asm`.
   5. Stripping the high color bit (bit 7) and reflecting the resulting bits back into screen pixel order across columns C:P.
-- Provided a dedicated second evaluation block on `Pixel Shifter` using 2D matrix arithmetic (`INT(offset / COLUMNS) + 1`, `MOD(offset, COLUMNS) + 1`) to ensure full transparency and navigability via Ariexcel and the Excel formula auditing detective.
+- Provided a dedicated second evaluation block on `Pixel Shifter` using 2D matrix arithmetic (`INT(offset / COLUMNS) + 1`, `MOD(offset, COLUMNS) + 1`) to ensure full transparency and navigability via Arixcel and the Excel formula auditing detective.
 - Integrated the full `PIXEL_SHIFTER_PREP.md` mechanics, mathematical breakdown (512 unique shapes across widths 1..7), 3-column mapping table, and Mermaid visual flow diagram directly into `README.md`.
 
 ## 2026-09-17 -- Phase 2: Sprite inventory
