@@ -15,7 +15,7 @@ Phases 1-4 are complete and the repo is public. The 2026-09-20 session reviewed 
 ## What's next
 
 1. **Phase 5 design session.** Phase 5 is underdetermined; it needs a discussion that ends in a design document under `docs/`, not a coding session. See the roadmap below.
-2. **Then the literate-source sync into `load-runner`.** The markdown -> HTML pipeline gets sorted out first, outside this project.
+2. **Then the literate-source sync into `a2-lode-runner`.** The markdown -> HTML pipeline gets sorted out first, outside this project.
 
 ---
 
@@ -23,9 +23,9 @@ Phases 1-4 are complete and the repo is public. The 2026-09-20 session reviewed 
 
 An Excel workbook that makes the Apple II hi-res graphics system tangible — not as a general-purpose bitmap editor, but as a lab tightly coupled to the Lode Runner disassembly. Each sheet illuminates one layer of the graphics machinery: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen.
 
-Excel stays prototypal on purpose. When something needs to run rather than be inspected, it belongs in native Python (`papple2`) or in the disassembly project (`load-runner`), not bolted onto the workbook.
+Excel stays prototypal on purpose. When something needs to run rather than be inspected, it belongs in native Python (`papple2`) or in the disassembly project (`a2-lode-runner`), not bolted onto the workbook.
 
-The second audience is the disassembly itself. Findings that started here -- the corrected shift-lookup documentation, the cycle comparison, the verification tests -- flow back into `load-runner`'s literate source, which is also the path towards taking that project public.
+The second audience is the disassembly itself. Findings that started here -- the corrected shift-lookup documentation, the cycle comparison, the verification tests -- flow back into `a2-lode-runner`'s literate source, which is also the path towards taking that project public.
 
 **Open question:** is `a2-hires-lab` a Lode Runner lab or an Apple II graphics lab? Adding `probotron`'s Robotron 2084 sprite mechanics (see `TODO.md`) only makes sense under the second reading, and it would turn the workbook into a compendium of the different ways Apple II games do graphics. The answer shapes the README's first sentence, the sheet structure, and how the data folders are laid out. It does not need deciding yet, but it should not decide itself by accident.
 
@@ -53,8 +53,8 @@ The workbook currently stops at three shifted bytes in `BLOCK_DATA`; nothing sho
 
 Scope, sheet layout and how much of `DRAW_SPRITE` to reproduce are open. The design session decides them and produces a design document under `docs/`.
 
-### Ongoing — Literate-source sync into `load-runner`
+### Ongoing — Literate-source sync into `a2-lode-runner`
 Carry the findings into the Lode Runner literate source: mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` documentation, the cycle comparison, the Mermaid diagram, the verification tests. Sequenced after Phase 5, so that the whole graphics pipeline travels at once rather than a story that stops halfway. Counter-argument worth keeping in view: Xekri's Ultima work and his markdown/HTML pipeline are current, and goodwill has a half-life -- if that window matters more than completeness, this moves ahead of Phase 5.
 
 ### Ongoing — `papple2`
-Low priority within this project. Test fixtures derived from the workbook and the adjacency work on `Display.update_hires` are better done in `load-runner`, where running subroutines against the disassembly makes sense.
+Low priority within this project. Test fixtures derived from the workbook and the adjacency work on `Display.update_hires` are better done in `a2-lode-runner`, where running subroutines against the disassembly makes sense.

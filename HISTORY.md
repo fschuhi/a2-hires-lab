@@ -29,7 +29,7 @@ Repo made public. Session spent reviewing the whole project for how it reads fro
 
 **Cleanups.** Removed leftover template artifacts (two stray UserForms, the broken `AllTags` name, four `GET.CELL` XLM names, German LAMBDAs), the deprecated `PixelShifter.bas`, the dead `SHEET_NAME` constant, and `Apple.py`. Renamed `SPRITE_DATA` to `Sprite Data` and removed the VBA constant that would have broken on the rename. Deleted the obsolete `a2-hires-lab-design.md`. Untracked the stencil-managed collaboration files. Trimmed requirements (`openpyxl` and `pyxll` out, `oletools` in) and restructured `TODO.md` by theme.
 
-**Decisions taken.** `papple2` work belongs in `load-runner`, where running subroutines against the disassembly makes sense, not in a spreadsheet. PyXLL dropped: native Python is the better direction, and Excel stays prototypal on purpose. LLM collaboration is stated plainly in the README rather than hidden. `probotron`'s Robotron 2084 sprite mechanics noted as the direction that would make this a compendium of Apple II graphics techniques.
+**Decisions taken.** `papple2` work belongs in `a2-lode-runner`, where running subroutines against the disassembly makes sense, not in a spreadsheet. PyXLL dropped: native Python is the better direction, and Excel stays prototypal on purpose. LLM collaboration is stated plainly in the README rather than hidden. `probotron`'s Robotron 2084 sprite mechanics noted as the direction that would make this a compendium of Apple II graphics techniques.
 
 ## 2026-09-19 -- Phase 4: Sprite Shifter & direct lookup model
 

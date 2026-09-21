@@ -37,12 +37,12 @@ In the style of `tests/test_shift_tables.py`: plain `pytest`, reading the `.asm`
 
 ## Documentation
 
-- Literate-source sync: integrate the findings into the Lode Runner literate source in `load-runner` -- mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` excerpt, the cycle comparison, the Mermaid visual mechanics diagram, and the verification test. Strategic framing in `GOALS.md`.
+- Literate-source sync: integrate the findings into the Lode Runner literate source in `a2-lode-runner` -- mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` excerpt, the cycle comparison, the Mermaid visual mechanics diagram, and the verification test. Strategic framing in `GOALS.md`.
 - ~~Shift lookup analysis & documentation: document why the two-stage dictionary (`PIXEL_SHIFT_TABLE` -> `PIXEL_PATTERN_TABLE`) could be consolidated into a single direct 1,792-byte lookup table without indirection, saving 1,024 bytes and 6502 cycles. Add architecture section to `README.md`.~~ -- done 2026-09-20: "Architectural Analysis" section in `README.md` with the self-modifying-code excerpt, the cycle comparison (about 1,824 vs. 1,208 per call), the verification of all 896 combinations, and `tests/test_shift_tables.py`.
 
 ## `papple2` integration
 
-Low priority here: the sensible home for `papple2` work is `load-runner`, where running subroutines against the disassembly makes more sense than in a spreadsheet.
+Low priority here: the sensible home for `papple2` work is `a2-lode-runner`, where running subroutines against the disassembly makes more sense than in a spreadsheet.
 
 - Derive test fixtures (sprite bytes + expected pixel RGB per cell) from the workbook.
 - Write failing tests for `Display.update_hires` adjacency logic.
