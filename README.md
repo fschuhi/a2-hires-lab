@@ -8,7 +8,7 @@
 
 ## What this is
 
-Not a general-purpose bitmap editor -- a lab. Each sheet illuminates one layer of the graphics machinery the disassembly documents: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen. The workbook is standalone from my `a2-lode-runner` disassembly project (not yet public; misspelling intentional; no shared code, no shared repo) and draws its data and documentation directly from Chapter 3 of `main.nw` from XekriRedmane's fantastic project https://github.com/XekriRedmane/lode_runner_reveng.
+Not a general-purpose bitmap editor -- a lab. Each sheet illuminates one layer of the graphics machinery the disassembly documents: how pixels become bytes, how bytes become colors, how the shift tables work, how sprites land on the memory-mapped screen. The workbook is standalone from my `a2-lode-runner` disassembly project (not yet public) and draws its data and documentation directly from Chapter 3 of `main.nw` from XekriRedmane's fantastic project https://github.com/XekriRedmane/lode_runner_reveng.
 
 One surprise along the way: the game's two-stage shift lookup uses 2,816 bytes of tables, but the same result fits in a single 1,792-byte table -- which would also cut the sprite-shifting routine from about 1,820 to about 1,210 CPU cycles -- see [Architectural Analysis](#architectural-analysis-the-indirection-mystery--direct-table-optimization).
 
