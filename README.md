@@ -389,9 +389,9 @@ If a direct 1,792-byte table is smaller and faster, why did the disassembly use 
 1. **Evolutionary / Generative Pipeline:** Doug Smith generated the 512 unique visual pattern gallery first as a mathematical proof of hi-res pattern compression. When building the shift engine, his external table generator was written to emit indices pointing into that gallery rather than flattening the final pairs into the shift pages.
 2. **The "Compression Intuition" Trap:** It is easy to assume that reducing 896 possibilities to 512 unique entries saves space. However, because the pointers themselves require 2 bytes per entry (16 bits), the pointer table consumes $896 \times 2 = 1{,}792$ bytes. Storing pointers into a 1,024-byte dictionary costs $1{,}792 + 1{,}024 = 2{,}816$ bytes, whereas storing the uncompressed target bytes directly costs only $1{,}792$ bytes.
 
-The equivalence was checked for every case: all 896 pattern/shift combinations, followed through `pixel_shift_table.asm` into `pixel_pattern_table.asm`, give exactly the shifted bytes, nd all 512 pattern entries are used. tests/test_shift_tables.py re-runs this check; make test does it in one step. `PIXEL_PATTERN_TABLE` is reached only through the shift table; the chapter's cross-reference lists no other code that uses it.
+The equivalence was checked for every case: all 896 pattern/shift combinations, followed through `pixel_shift_table.asm` into `pixel_pattern_table.asm`, give exactly the shifted bytes, and all 512 pattern entries are used. tests/test_shift_tables.py re-runs this check; make test does it in one step. `PIXEL_PATTERN_TABLE` is reached only through the shift table; the chapter's cross-reference lists no other code that uses it.
 
-This lab shows that the entire 2-stage dictionary cold be collapsed into a single, direct 1,792-byte table (most likely) without losing any functionality.
+This lab shows that the entire 2-stage dictionary could be collapsed into a single, direct 1,792-byte table (most likely) without losing any functionality.
 
 ---
 
