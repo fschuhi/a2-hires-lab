@@ -61,8 +61,10 @@ Public Function PixelsToByteValue(aiPixels() As Long, ByVal iRow As Long, _
     PixelsToByteValue = lVal
 End Function
 
+
 Public Sub UpdateViewer(wsSpriteViewer As Worksheet)
-    Application.ScreenUpdating = False
+    SetSilentApplicationState
+    
     Dim aiPixels(0 To 10, 0 To 13) As Long
     Dim aiHB(0 To 10, 0 To 1) As Long
     Dim iRow As Long, iCol As Long
@@ -88,12 +90,13 @@ Public Sub UpdateViewer(wsSpriteViewer As Worksheet)
 
     ' 3. Paint the viewer from the pixels just read.
     PaintViewer wsSpriteViewer, aiPixels, aiHB
-    Application.ScreenUpdating = True
+    
+    RevertApplicationState
 End Sub
 
 
 Public Sub LoadFromBytes(wsSpriteViewer As Worksheet)
-    Application.ScreenUpdating = False
+    SetSilentApplicationState
     
     Dim aiPixels(0 To 10, 0 To 13) As Long
     Dim aiHB(0 To 10, 0 To 1) As Long
@@ -128,7 +131,8 @@ Public Sub LoadFromBytes(wsSpriteViewer As Worksheet)
 
     ' 3. Paint the viewer from the pixels just decoded.
     PaintViewer wsSpriteViewer, aiPixels, aiHB
-    Application.ScreenUpdating = True
+    
+    RevertApplicationState
 End Sub
 
 
@@ -144,7 +148,7 @@ Public Sub LoadSpriteFromTable(wsSpriteViewer As Worksheet)
     ' sheet), so the unqualified Range(...) calls below resolve to
     ' whichever such sheet is currently active -- same as typing into
     ' those cells by hand would.
-    Application.ScreenUpdating = False
+    SetSilentApplicationState
     
     Dim rSpriteData As Range: Set rSpriteData = Range(R_SpriteData)
 
@@ -183,7 +187,8 @@ Public Sub LoadSpriteFromTable(wsSpriteViewer As Worksheet)
     ' Decompose into pixels + HB and paint the viewer, exactly once,
     ' after all 11 rows have been written.
     LoadFromBytes wsSpriteViewer
-    Application.ScreenUpdating = True
+    
+    RevertApplicationState
 End Sub
 
 

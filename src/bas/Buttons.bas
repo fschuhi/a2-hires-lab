@@ -44,17 +44,22 @@ Public Sub Button_HideHighBitColumns()
     Columns("Q").Hidden = Not bHidden
 End Sub
 
+
+Public Sub Button_ClearMemory()
+    Range("HiresMemory").ClearContents
+End Sub
+
 Public Sub Button_PlaceShiftedSprite()
     ' Top-left cell of the selection on 'Hires Screen' = sprite's top-left pixel.
     If TypeName(Selection) <> "Range" Then Exit Sub
-    Dim rngScreen As Range: Set rngScreen = ThisWorkbook.Names("HiresScreen").RefersToRange
-    Dim rngCell As Range: Set rngCell = Selection.Cells(1)
-    If rngCell.Worksheet.Name <> rngScreen.Worksheet.Name Then Exit Sub
-    If Intersect(rngCell, rngScreen) Is Nothing Then
+    Dim rScreen As Range: Set rScreen = ThisWorkbook.Names("HiresScreen").RefersToRange
+    Dim rCell As Range: Set rCell = Selection.Cells(1)
+    If rCell.Worksheet.Name <> rScreen.Worksheet.Name Then Exit Sub
+    If Intersect(rCell, rScreen) Is Nothing Then
         MsgBox "Select a pixel cell inside the screen area.", vbExclamation, "Place shifted sprite"
         Exit Sub
     End If
-    PlaceShiftedSprite rngCell.Row - rngScreen.Row, rngCell.Column - rngScreen.Column
+    PlaceShiftedSprite rCell.Row - rScreen.Row, rCell.Column - rScreen.Column
 End Sub
 
 

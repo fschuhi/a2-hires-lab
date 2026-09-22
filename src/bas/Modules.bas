@@ -48,6 +48,7 @@ End Sub
 
 Public Sub ExportProjectModules()
     ExportModuleByName "B_"
+    ExportModuleByName "Buttons"
     ExportModuleByName "JumpStation_"
     ExportModuleByName "Macros"
     ExportModuleByName "Modules"
