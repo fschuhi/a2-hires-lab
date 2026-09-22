@@ -34,7 +34,7 @@ RUN           = $(ACTIVATE) && python
 SETUP_STAMP   = $(VENV_DIR)/.setup_stamp
 
 # --- Phony targets ---
-.PHONY: all setup test test-verbose export-vba clean showtree gentree filesdump filesdump-detailed help
+.PHONY: all setup test test-verbose export-vba clean showtree gentree patch filesdump filesdump-detailed help
 
 all: setup
 
@@ -80,6 +80,13 @@ gentree: ## Save tree to tmp/project_tree.txt (needs `tree`; mac-side)
 	@mkdir -p tmp
 	@tree -I ".venv|.venv-win|__pycache__|tmp|*.egg-info|.git|*.jpg|*_rejected.*" > tmp/project_tree.txt
 	@echo "Project tree saved to tmp/project_tree.txt"
+
+patch: ## apply all *.patch files in the repo root, then move them to tmp/applied-patches/
+	@ls *.patch >/dev/null 2>&1 || (echo "No *.patch files in the repo root" && exit 1)
+	git apply --check *.patch
+	git apply *.patch
+	mkdir -p tmp/applied-patches
+	mv *.patch tmp/applied-patches/
 
 filesdump: gentree export-vba ## Create context dump for LLMs
 	@echo "--- Generating filesdump ---"
