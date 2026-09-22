@@ -14,13 +14,18 @@
 
 ## Workbook
 
+- Sprite placement, half-screen columns: the game can't hold a pixel column 0-279 in one byte, so it works with half columns (0-139, one per double pixel) and turns them into byte and shift with `HALF_SCREEN_COL_BYTE_TABLE` / `HALF_SCREEN_COL_SHIFT_TABLE` (Chapter 3, near `GET_SCREEN_COORDS_FOR`). `PlaceShiftedSprite` uses full-resolution x with `\ 7` and `Mod 7` instead. Reproduce the game's way.
+- Sprite placement, masked merge: `PlaceShiftedSprite` overwrites the three bytes. The game merges them into the screen bytes with `PIXEL_MASK0` / `PIXEL_MASK1` in `DRAW_SPRITE`.
+- Sprite placement, erasing: nothing removes a placed sprite except `Button_ClearScreen`.
+- Hires sheets, small cleanups from the 2026-09-22 review: the `B` columns on `Hires Pixels` / `Hires HB` are leftover copies of the skip flag from `Hires Memory` and unused; `'row_to_offset_hi_table.asm'!A2` says `row_to_offset_lo_table.asm`; `D` means memory ordinal on `Hires Memory` but screen row on the other two; `'Sprite Shifter'!I7` is `=1` instead of a reference to `'Sprite (load)'`.
+- `Hires Memory`: format `HiresMemory` as Text. Typed bytes like `33` work only because `HEX2BIN` reads the number as hex text; something like `1E2` turns into scientific notation first.
 - `NTSCColor` refactoring: get rid of `FIRST_COL` and `LAST_COL` in favor of local named range access. Do this before the Sprite Shifter row painter.
 - `Sprite (load)`: spin control next to the sprite number cell `'Sprite (load)'!X1`, so one can flip through the sprite inventory easily.
 - Sprite Editor: `Worksheet_Change` hook that runs `LoadSpriteFromTable` when `'Sprite (load)'!X1` changes -- higher priority than the other event-based updates.
 - Sprite Editor: `Worksheet_Change` hook to replace the button-click workflow with live updates on edit -- still open, being handled directly in VBA.
 - Sprite Inventory: sprite picker/dropdown UI postponed; the typed sprite number in `'Sprite (load)'!X1` remains the interface for now.
 - Workbook documentation: cell comments across the sheets, so that the "> comments <" navigation has something to show, plus text boxes with short explanations and pointers into `README.md`.
-- _Low priority:_ Sprite Shifter row painter -- a lightweight VBA macro button that paints the 21-cell row background colors underneath the screen bitfield using `NTSCColor.RowColors`. Only after the `NTSCColor` refactoring. Seeing that the shifting works is enough for now.
+- _Low priority:_ Sprite Shifter row painter -- a lightweight VBA macro button that paints the 21-cell row background colors underneath the screen bitfield using `NTSCColor.RowColors`. Only after the `NTSCColor` refactoring. Seeing that the shifting works is enough for now. Note: `ScreenMemory.PaintScreen` shows one way to do it, colouring cells from bytes via `PixelColor`.
 - _Low priority:_ Save sprite -- export editor content back to `sprite_data.asm` interleaved format, enabling round-trip editing.
 
 ## Tests
@@ -37,8 +42,7 @@ In the style of `tests/test_shift_tables.py`: plain `pytest`, reading the `.asm`
 
 ## Documentation
 
-- Literate-source sync: integrate the findings into the Lode Runner literate source in `a2-lode-runner` -- mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` excerpt, the cycle comparison, the Mermaid visual mechanics diagram, and the verification test. Strategic framing in `GOALS.md`.
-- ~~Shift lookup analysis & documentation: document why the two-stage dictionary (`PIXEL_SHIFT_TABLE` -> `PIXEL_PATTERN_TABLE`) could be consolidated into a single direct 1,792-byte lookup table without indirection, saving 1,024 bytes and 6502 cycles. Add architecture section to `README.md`.~~ -- done 2026-09-20: "Architectural Analysis" section in `README.md` with the self-modifying-code excerpt, the cycle comparison (about 1,824 vs. 1,208 per call), the verification of all 896 combinations, and `tests/test_shift_tables.py`.
+- Literate-source sync: integrate the findings into the Lode Runner literate source in `a2-lode-runner` -- mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` excerpt, the cycle comparison, the Mermaid visual mechanics diagram, the verification test, and the README chapter "Screen Memory and the Hires Screen", whose sections already point into Chapter 3. Strategic framing in `GOALS.md`.
 
 ## `papple2` integration
 

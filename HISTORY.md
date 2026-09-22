@@ -9,6 +9,22 @@
 
 ---
 
+## 2026-09-22 -- Phase 5: screen memory, sprite placement, NTSC screen
+
+Closed the chain from `BLOCK_DATA` to the screen. A shifted Lode Runner sprite can now be placed anywhere on HGR page 1 and shows up in NTSC colours. Phase 5 was built directly instead of going through the planned design session.
+
+**The hires sheets.** `Hires Memory` holds HGR page 1 as 192 lines of 40 bytes in address order, stepping over the 8 unused bytes at the end of each 128-byte block. `Hires Pixels` and `Hires HB` show the same bytes in screen order, as 7-pixel strings and as high bits; their addresses come from `ROW_TO_OFFSET_LO` / `ROW_TO_OFFSET_HI` OR `$20`, and `MATCH` finds each line in `Hires Memory`. All 192 addresses were checked against the standard formula `$2000 + (y mod 8) * $400 + ((y div 8) mod 8) * $80 + (y div 64) * $28`; they all agree.
+
+**`ScreenMemory.bas`.** `PlaceShiftedSprite(row, col)` splits the pixel column into byte (`x div 7`) and shift (`x mod 7`), writes the shift into `Shift` so `Sprite Shifter` recomputes `BlockData`, and writes the 11 x 3 bytes into `Hires Memory`, cut off at the right and at the bottom. `PaintScreen` is the video circuit: it reads lines from memory and colours `Hires Screen` with `NTSCColor.PixelColor`, knowing nothing about sprites. After placing a sprite, the area it wrote plus one pixel on each side is repainted, because neighbouring pixels can change colour. `ClearScreen` works like `HGR`: zero page 1, paint the screen. `LineAddress` gives the address of a screen row. Black is shown as light grey `RGB(191,191,191)`. Buttons: `Button_PlaceShiftedSprite` (selected cell = sprite's top-left pixel) and `Button_ClearScreen`, replacing `Button_ClearMemory`.
+
+**Two screen sheets.** `Hires Screen (debug)` keeps the formulas and shows which bits are set; `Hires Screen` has no formulas and is painted from memory. Same rows and columns, side by side, so switching between them shows bits versus colours at the same cells -- including coloured pixels with no bit set.
+
+**Simplifications, now in `TODO.md`.** Full-resolution columns instead of the game's half columns (`HALF_SCREEN_COL_BYTE_TABLE` / `HALF_SCREEN_COL_SHIFT_TABLE`, needed because 280 does not fit in a byte), no masked merge with `PIXEL_MASK0` / `PIXEL_MASK1`, no erasing.
+
+**Documentation.** New README chapter "Screen Memory and the Hires Screen": the hires sheets with a Mermaid data-flow chart, the memory map, placing a shifted sprite, painting as the video circuit, and how to try it out. Sections open with pointers into Chapter 3 of `main.nw`, so they can become annotations in `a2-lode-runner`. Two new images: `img/player_orange_blue.jpg` (column parity swaps blue and orange) and `img/player_edge_color.jpg` (colours change where two sprites meet).
+
+**Tooling.** Changes from LLM sessions now arrive as patches applied with `make patch` (documented in the README together with `make help`). The new `Modules` module exports the VBA before patching, so the patched files can be imported back; `ExportProjectModules` was missing `Buttons`, which had left `src/bas/Buttons.bas` stale. `SetSilentApplicationState` / `RevertApplicationState` from `B_.bas` speed up sprite loading and placement. New named ranges: `BlockData`, `Shift`, `HiresScreen`, `HiresMemory`.
+
 ## 2026-09-20 -- Public release: README overhaul, licensing, VBA export, first tests
 
 Repo made public. Session spent reviewing the whole project for how it reads from the outside, rather than on Phase 5.

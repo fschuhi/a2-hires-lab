@@ -507,10 +507,12 @@ This lab shows that the entire 2-stage dictionary could be collapsed into a sing
 - **A colored 0-pixel inherits its hue from its flanking 1-bit, not its own column.** See Architecture above; confirmed against the chapter's own worked sprite, not just the short illustrative fragments.
 - **Both buttons are idempotent by construction.** Full overwrite of every owned cell from current inputs, every run -- no accumulation, no half-updated state.
 - **`Hex0`/`Hex1` store the byte as the game actually holds it (high bit included), not as the chapter prints it.** E.g. the chapter's `0x55` is `0xD5` in `Hex0` once `HB0` defaults to 1. A known, minor mismatch for eyeballing against the PDF -- not a bug (see `TODO.md`).
-- **The workbook is the source of truth for the VBA; `src/bas/` is a one-way export.** Modules are edited in the VBA editor and written to `src/bas/` by `make export-vba`, so the code can be read on GitHub and diffed in git. The exported files are never imported back.
+- **The workbook is the source of truth for the VBA.** `src/bas/` is exported from it (`make export-vba` or `Modules.ExportProjectModules`), so the code can be read on GitHub and diffed in git. Changes from LLM sessions arrive as drop-ins or patches against `src/bas/`, are applied with `make patch`, and imported back into the workbook.
 - **`HB0`/`HB1` default to 1** in a freshly laid-out editor, matching what the game actually does at runtime (`sprite_data.asm`'s raw bytes are 7-bit, 0x00-0x7F; the high bit is OR'd in elsewhere in the game's own pipeline).
 - **Direct table access for Pixel Shifting.** Shift lookups route directly through `PIXEL_SHIFT_PAGES` into `pixel_shift_table.asm` and `pixel_pattern_table.asm` rather than relying on intermediate display representations, keeping logic faithful to 6502 memory architecture.
 - **Middle byte `BITOR` automatically preserves color bit.** Merging shifted byte overflow ($A_1$) with shifted byte head ($B_0$) via `BITOR` naturally maintains bit 7 as 1 without requiring additional bit manipulation.
+- **`Hires Memory` is the only input for the screen sheets.** `Hires Pixels`, `Hires HB`, `Hires Screen (debug)` and `Hires Screen` are all derived from its bytes; sprites reach the screen only by being written into memory.
+- **`Hires Screen` is painted from memory, never from sprite data.** A pixel's colour depends on its neighbours and its byte's high bit, so `PaintScreen` reads the bytes back after they are written, including one pixel on each side of the changed area.
 
 ---
 

@@ -8,14 +8,14 @@
 
 ## 📍 Current Session Pointer
 
-## Where we are -- 2026-09-20
+## Where we are -- 2026-09-22
 
-Phases 1-4 are complete and the repo is public. The 2026-09-20 session reviewed the whole project from a visitor's point of view: `README.md` rewritten and its 6502 documentation corrected and quantified, licensing split (MIT for code, CC BY-SA 4.0 for docs and Xekri-derived data), `make export-vba`, and the first tests. Details in `HISTORY.md`.
+The chain is closed: a shifted sprite can be placed anywhere on HGR page 1 and shows up in NTSC colours on `Hires Screen`, painted from `Hires Memory` the way the video circuit does it. Phase 5a is done, 5b in a simplified form. The README chapter "Screen Memory and the Hires Screen" documents it. Details in `HISTORY.md`.
 
 ## What's next
 
-1. **Phase 5 design session.** Phase 5 is underdetermined; it needs a discussion that ends in a design document under `docs/`, not a coding session. See the roadmap below.
-2. **Then the literate-source sync into `a2-lode-runner`.** The markdown -> HTML pipeline gets sorted out first, outside this project.
+1. **The rest of 5b**, from `TODO.md`: half-screen columns, the masked merge with `PIXEL_MASK0` / `PIXEL_MASK1`, erasing. Worth reading `DRAW_SPRITE` in `main-chapter-3.md` first.
+2. **Then the literate-source sync into `a2-lode-runner`.** The README chapter is written so its sections can become Chapter 3 annotations there.
 
 ---
 
@@ -45,13 +45,11 @@ The table-lookup chain from Chapter 3 §3.3: enter a 7-bit pattern and a shift a
 ### Phase 4 — Sprite Shifter -- done 2026-09-19
 The Pixel Shifter applied to a whole sprite (all 22 bytes), reproducing `COMPUTE_SHIFTED_SPRITE` including the `BITOR` merge of the overlapping middle byte, plus the direct-lookup model that led to the architectural analysis in `README.md`.
 
-### Phase 5 — Closing the chain: from shifted bytes to the screen (needs a design session)
-The workbook currently stops at three shifted bytes in `BLOCK_DATA`; nothing shows them reaching the screen. Chapter 3 §3.4 and §3.5 hold the missing machinery. Two halves, 5a first because it makes 5b possible:
+### Phase 5 -- Closing the chain: from shifted bytes to the screen -- 5a done, 5b partly done 2026-09-22
+From the three shifted bytes in `BLOCK_DATA` to the screen, following Chapter 3, sections 3.4 and 3.5. Built directly, without the planned design session; documented in the README chapter "Screen Memory and the Hires Screen".
 
-- **5a — Memory map.** All 192 screen rows resolved to addresses via `ROW_TO_OFFSET_LO` / `ROW_TO_OFFSET_HI`, for both HGR pages, making the non-consecutive row layout visible, including where the status line sits.
-- **5b — Sprite placement.** Game row and column to screen row, byte offset and shift amount (`GET_BYTE_AND_SHIFT_FOR_COL`), then the masked merge of the three `BLOCK_DATA` bytes into the screen bytes with `PIXEL_MASK0` / `PIXEL_MASK1`, the way `DRAW_SPRITE` does it.
-
-Scope, sheet layout and how much of `DRAW_SPRITE` to reproduce are open. The design session decides them and produces a design document under `docs/`.
+- **5a -- Memory map.** Done for HGR page 1: `Hires Memory`, `Hires Pixels` and `Hires HB`, all 192 rows resolved via `ROW_TO_OFFSET_LO` / `ROW_TO_OFFSET_HI`. Page 2 and the status line are not shown separately.
+- **5b -- Sprite placement.** Done in simplified form: `PlaceShiftedSprite` places a shifted sprite at any pixel, and `PaintScreen` colours `Hires Screen` from memory. Still open (`TODO.md`): the game's half-screen columns, the masked merge with `PIXEL_MASK0` / `PIXEL_MASK1` as in `DRAW_SPRITE`, and erasing.
 
 ### Ongoing — Literate-source sync into `a2-lode-runner`
 Carry the findings into the Lode Runner literate source: mapping tables, the corrected `COMPUTE_SHIFTED_SPRITE` documentation, the cycle comparison, the Mermaid diagram, the verification tests. Sequenced after Phase 5, so that the whole graphics pipeline travels at once rather than a story that stops halfway. Counter-argument worth keeping in view: Xekri's Ultima work and his markdown/HTML pipeline are current, and goodwill has a half-life -- if that window matters more than completeness, this moves ahead of Phase 5.
