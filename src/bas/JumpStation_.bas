@@ -127,7 +127,7 @@ Sub ShowJumpStation()
     AddJumpTarget "", "Goto Sprite (load)", "Sprite (load)"
     AddJumpTarget "", "CreateSectionAgendas", "CreateSectionAgendas"
     AddJumpTarget "", "ExportProjectModules", "ExportProjectModules"
-    AddJumpTarget "", "Button_ClearMemory", "Button_ClearMemory"
+    AddJumpTarget "", "Button_ClearScreen", "Button_ClearScreen"
     AddJumpTarget "", "Button_PlaceShiftedSprite", "Button_PlaceShiftedSprite"
     
     ' Add WS_Work-specific jump targets

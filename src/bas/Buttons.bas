@@ -45,8 +45,8 @@ Public Sub Button_HideHighBitColumns()
 End Sub
 
 
-Public Sub Button_ClearMemory()
-    Range("HiresMemory").ClearContents
+Public Sub Button_ClearScreen()
+    ClearScreen
 End Sub
 
 Public Sub Button_PlaceShiftedSprite()
