@@ -27,9 +27,11 @@ One surprise along the way: the game's two-stage shift lookup uses 2,816 bytes o
 | `Pixel Shift Table` | All 128 patterns x 7 shifts on one sheet, each resolved to its target address |
 | `Pixel Shift Pattern Table` | The shift tables rewritten as one direct 1,792-byte table |
 | `Sprite Shifter` | Shift a whole sprite by 0-6 pixels and watch it spread into a third byte |
-| Data sheets | The original tables from the disassembly, parsed into cells: `sprite_data.asm`, `Sprite Data`, `Sprite Loader`, `pixel_shift_table.asm`, `pixel_pattern_table.asm`, `Pixel Shift Pages` |
-
-Planned: a Memory Map Viewer for the HGR pages.
+| `Hires Memory` | HGR page 1 as 192 lines of 40 bytes, in address order; the input for the three screen sheets |
+| `Hires Pixels`, `Hires HB` | The same bytes in screen order, as pixels and as high bits |
+| `Hires Screen (debug)` | One cell per screen pixel, showing which bits are set |
+| `Hires Screen` | The same grid in NTSC colours; select a cell and place a shifted sprite there |
+| Data sheets | The original tables from the disassembly, parsed into cells: `sprite_data.asm`, `Sprite Data`, `Sprite Loader`, `pixel_shift_table.asm`, `pixel_pattern_table.asm`, `Pixel Shift Pages`, `row_to_offset_lo_table.asm`, `row_to_offset_hi_table.asm` |
 
 ## Design choices
 
@@ -50,6 +52,8 @@ make setup         # create venv, install dependencies
 make test          # verify the shift tables against the disassembly data
 make export-vba    # write the workbook's VBA modules into src/bas/ as plain text
 make filesdump     # export VBA, then regenerate tmp/filesdump.txt from manifest.lst, for LLM sessions
+make patch         # apply *.patch files from the repo root, for LLM sessions
+make help          # list all targets
 ```
 
 The workbook itself has no build step yet: open `a2-hires-lab.xlsm` directly in Excel. `Update Viewer` and `Load from Bytes` are Form Control buttons on each sprite sheet (e.g. `Sprite (load)`), wired to `Buttons.Button_UpdateViewer` / `Buttons.Button_LoadFromBytes`, which call `SpriteEditor.UpdateViewer` / `SpriteEditor.LoadFromBytes` for the active sheet.
@@ -67,6 +71,7 @@ There's no automated test suite yet. Correctness is checked by hand against Chap
 - [Sprite Table Memory Layout](#sprite-table-memory-layout)
 - [The Shift Engine](#the-shift-engine)
 - [The Sprite Shifter Engine](#the-sprite-shifter-engine)
+- [Screen Memory and the Hires Screen](#screen-memory-and-the-hires-screen)
 - [Architectural Analysis: The Indirection Mystery & Direct Table Optimization](#architectural-analysis-the-indirection-mystery--direct-table-optimization)
 - [Settled decisions](#settled-decisions)
 - [Relation to sibling projects](#relation-to-sibling-projects)
@@ -328,6 +333,104 @@ To make the resulting 33-byte `BLOCK_DATA` buffer tangible, `Sprite Shifter` unp
 3. The resulting $3 \times 7 = 21$ bits are displayed in individual cells, grouped visually into three screen bytes (`AA:AG`, `AI:AO`, `AQ:AW`).
 
 Adjusting the shift cell $S$ from $0$ to $6$ allows immediate inspection of the sprite gliding smoothly across byte boundaries into the third byte.
+
+---
+
+## Screen Memory and the Hires Screen
+
+The Sprite Shifter stops at the 33 bytes of `BLOCK_DATA`. This chapter follows those bytes to the screen: first into HGR page 1 memory, then from memory to the picture. The two ends are pure Apple II -- how screen memory is laid out, and how the video hardware turns it into colours. Only the step in the middle, placing a shifted sprite, is Lode Runner.
+
+### The hires sheets
+
+`Hires Memory` is the only input. It holds the 192 lines of HGR page 1, 40 bytes each, and everything else is derived from it:
+
+| Sheet | What it shows |
+|---|---|
+| `Hires Memory` | The 192 lines in address order (`$2000`, `$2028`, `$2050`, `$2080`, ...), 40 bytes per line. Type bytes by hand, or let `PlaceShiftedSprite` write them |
+| `Hires Pixels` | The same bytes in screen order, each byte as its 7 pixels, left to right |
+| `Hires HB` | The same bytes in screen order, only the high bit (bit 7) of each |
+| `Hires Screen (debug)` | 280 x 192 cells, one per pixel, driven by formulas from `Hires Pixels`: a block for every set bit, no colour |
+| `Hires Screen` | The same 280 x 192 grid without formulas, painted in NTSC colours by `PaintScreen` |
+
+```mermaid
+flowchart TD
+    BD["BlockData<br/>(Sprite Shifter)"] --> PSS["PlaceShiftedSprite<br/>(VBA)"]
+    RT["row_to_offset tables"] --> PSS
+    PSS --> HM["Hires Memory<br/>address order"]
+    HM --> HP["Hires Pixels<br/>screen order"]
+    HM --> HB["Hires HB<br/>screen order"]
+    RT --> HP
+    RT --> HB
+    HP --> DBG["Hires Screen (debug)<br/>set bits, formulas"]
+    HM --> PAINT["PaintScreen<br/>(VBA)"]
+    PAINT --> HS["Hires Screen<br/>NTSC colours"]
+```
+
+The two screen sheets sit next to each other and have exactly the same rows and columns. Switching between them shows, cell by cell, which bits are set in memory and what a colour TV makes of them -- including coloured pixels where no bit is set at all.
+
+### The memory map
+
+> Chapter 3, "Memory mapped graphics": `ROW_TO_OFFSET_LO`, `ROW_TO_OFFSET_HI`, `ROW_TO_ADDR`.
+
+HGR page 1 is the 8 KB from `$2000` to `$3FFF`. Within a line, consecutive bytes are consecutive pixels. The lines themselves are not consecutive:
+
+- Every 128-byte block holds three lines, at offsets `+$00`, `+$28` and `+$50`, followed by 8 unused bytes (`+$78` to `+$7F`). 192 lines x 40 bytes use 7,680 of the 8,192 bytes; the other 512 are these gaps.
+- The three lines in a block are 64 screen rows apart. Neighbouring screen rows are `$400` apart in memory.
+- As a formula: the line for screen row y starts at `$2000 + (y mod 8) * $400 + ((y div 8) mod 8) * $80 + (y div 64) * $28`.
+
+The first memory lines show the pattern:
+
+| Address | `$2000` | `$2028` | `$2050` | `$2080` | `$20A8` | `$20D0` | ... | `$2400` |
+|---|---|---|---|---|---|---|---|---|
+| Screen row | 0 | 64 | 128 | 8 | 72 | 136 | ... | 1 |
+
+Lode Runner doesn't compute this. It looks up the low byte of the line address in `ROW_TO_OFFSET_LO` and the high byte in `ROW_TO_OFFSET_HI`, then ORs in `HGR_PAGE` (`$20` for page 1, `$40` for page 2). The high-byte table only holds `$00` to `$1F`, so the same two tables serve both pages.
+
+The workbook does both directions. `Hires Memory` walks the addresses in order, stepping 40 bytes, or 48 after a line that ends in `$50` or `$D0` to skip the gap. `Hires Pixels` and `Hires HB` go through the screen rows, build each address from the two tables OR `$20`, and find that line in `Hires Memory`. All 192 addresses agree with the formula above.
+
+### Placing a shifted sprite
+
+> Chapter 3, "Memory mapped graphics": `GET_SCREEN_COORDS_FOR`, `COL_BYTE_TABLE`, `COL_SHIFT_TABLE`, `HALF_SCREEN_COL_BYTE_TABLE`, `HALF_SCREEN_COL_SHIFT_TABLE`.
+
+A pixel column x (0 to 279) splits into a byte column and a shift: byte `x div 7`, shift `x mod 7`. `Button_PlaceShiftedSprite` takes the selected cell on `Hires Screen` as the sprite's top-left pixel and calls `PlaceShiftedSprite(row, col)`, which
+
+1. writes the shift into `Shift` (`'Sprite Shifter'!B22`), so `Sprite Shifter` recomputes `BlockData` (`'Sprite Shifter'!BC52:BE62`, 11 rows x 3 bytes),
+2. for each of the 11 sprite rows, finds the line address of screen row `row + r` and writes the 3 bytes at byte columns `x div 7` to `x div 7 + 2` into `Hires Memory`,
+3. cuts off whatever sticks out to the right or below.
+
+This is the path of the game -- sprite table, shift lookup, `BLOCK_DATA`, row address, screen memory -- with three simplifications:
+
+- **Full-resolution columns.** 280 columns don't fit in one byte, so the game works with half columns (0 to 139, one per double pixel) and turns them into byte and shift with `HALF_SCREEN_COL_BYTE_TABLE` and `HALF_SCREEN_COL_SHIFT_TABLE`. The workbook uses x directly.
+- **No masking.** The three bytes overwrite what was there. The game merges them into the screen bytes with `PIXEL_MASK0` / `PIXEL_MASK1` in `DRAW_SPRITE`.
+- **No erasing.** Nothing is removed when a sprite is placed elsewhere; `Button_ClearScreen` clears all of memory.
+
+### Painting the screen: the video circuit
+
+> Chapter 3, "Pixels and their color".
+
+On the Apple II no program draws the picture. The video hardware reads page 1 line by line, 60 times a second, and turns the bits into the TV signal. `PaintScreen` does the same for a rectangle of `Hires Screen`: it reads the lines from `Hires Memory`, splits each byte into 7 pixels (bit 0 leftmost) plus the high bit, and colours each cell with `NTSCColor.PixelColor`. It knows nothing about sprites.
+
+The colour of a pixel depends on four things: its own bit, its left and right neighbours, the parity of its absolute screen column, and the high bit of its own byte (see [The colour model](#the-colour-model)). Two consequences:
+
+- **Colour comes from memory, never from the sprite.** A sprite changes what its neighbours look like, and what is already in memory changes what the sprite looks like. So `PlaceShiftedSprite` repaints the area it wrote plus one pixel on each side, read back from memory.
+- **The same sprite changes colour when it moves.** Lode Runner sets the high bit of every sprite byte, so only the blue/orange pair appears; moving by an odd number of columns swaps them.
+
+Black is shown as light grey, `RGB(191,191,191)`: easier on the eyes, and white pixels still stand out.
+
+![The player sprite at two positions an odd number of columns apart: the dot on the head is blue in one and orange in the other](img/player_orange_blue.jpg)
+
+*Same sprite, same bytes, different column parity: the dot on the head switches between blue and orange.*
+
+![Two player sprites placed close together, with pixels changing colour where they meet](img/player_edge_color.jpg)
+
+*Two sprites placed close together: where their pixels meet, colours change -- coloured pixels turn white, and gaps between them take on colour. This is only an illustration of the colour rules; the player sprite never meets itself like this in the game.*
+
+### Trying it out
+
+1. On `Hires Screen`, click `Clear Screen`.
+2. Pick a sprite by number in `'Sprite (load)'!X1`.
+3. Select any cell on `Hires Screen` and click `Place Shifted Sprite`. Repeat at other positions, one column apart, and next to an earlier sprite.
+4. Switch to `Hires Screen (debug)` to see which bits are actually set, and to `Hires Memory` to see the bytes.
 
 ---
 
