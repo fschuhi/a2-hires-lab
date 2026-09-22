@@ -33,7 +33,6 @@ requirements-win.txt
 
 src/bas/Buttons.bas
 src/bas/Macros.bas
-#src/bas/Modules.bas
 src/bas/NTSCColor.bas
 src/bas/ScreenMemory.bas
 src/bas/SpriteEditor.bas
@@ -42,6 +41,7 @@ src/bas/Util.bas
 # standard libraries
 #src/bas/B_.bas
 #src/bas/JumpStation_.bas
+#src/bas/Modules.bas
 #src/bas/UserFormComment.frm
 #src/bas/UserFormSelector.frm
 #src/bas/UserFormComment.frm
