@@ -52,6 +52,7 @@ Public Sub ExportProjectModules()
     ExportModuleByName "Macros"
     ExportModuleByName "Modules"
     ExportModuleByName "NTSCColor"
+    ExportModuleByName "ScreenMemory"
     ExportModuleByName "SpriteEditor"
     ExportModuleByName "Util"
     ExportModuleByName "WorksheetsMatrix_"
