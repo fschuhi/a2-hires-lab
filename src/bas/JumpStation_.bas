@@ -1,4 +1,7 @@
 Attribute VB_Name = "JumpStation_"
+' Copyright (c) 2009-2026 Frank Schuhardt
+' SPDX-License-Identifier: MIT
+   
 Option Explicit
 
 Private m_frmSelector As UserFormSelector
@@ -123,6 +126,7 @@ Sub ShowJumpStation()
     AddJumpTarget "", "Goto Sprite Shifting", "Sprite Shifting"
     AddJumpTarget "", "Sprites", "Sprites"
     AddJumpTarget "", "CreateSectionAgendas", "CreateSectionAgendas"
+    AddJumpTarget "", "ExportProjectModules", "ExportProjectModules"
     
     ' Add WS_Work-specific jump targets
     'AddJumpTarget WS_Work, "Add row", "AddRow"

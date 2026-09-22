@@ -1,4 +1,7 @@
 Attribute VB_Name = "SpriteEditor"
+' Copyright (c) 2026 Frank Schuhardt
+' SPDX-License-Identifier: MIT
+
 Option Explicit
 
 ' SpriteEditor -- wires the Editor grid, Util, and NTSCColor together for

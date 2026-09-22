@@ -1,4 +1,7 @@
 Attribute VB_Name = "Macros"
+' Copyright (c) 2026 Frank Schuhardt
+' SPDX-License-Identifier: MIT
+
 Option Explicit
 
 '*************************************

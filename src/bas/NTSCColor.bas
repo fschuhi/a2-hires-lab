@@ -1,4 +1,7 @@
 Attribute VB_Name = "NTSCColor"
+' Copyright (c) 2026 Frank Schuhardt
+' SPDX-License-Identifier: MIT
+
 Option Explicit
 
 ' NTSCColor -- NTSC artifact color rules, Chapter 3 page 7.

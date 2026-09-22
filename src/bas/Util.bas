@@ -1,4 +1,7 @@
 Attribute VB_Name = "Util"
+' Copyright (c) 2026 Frank Schuhardt
+' SPDX-License-Identifier: MIT
+
 Option Explicit
 
 ' Util -- hex/bit conversion helpers for a2-hires-lab.

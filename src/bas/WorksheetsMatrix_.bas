@@ -1,4 +1,7 @@
 Attribute VB_Name = "WorksheetsMatrix_"
+' Copyright (c) 2009-2026 Frank Schuhardt
+' SPDX-License-Identifier: MIT
+
 Option Explicit
 
 Const WS_Worksheets = "Worksheets matrix"
